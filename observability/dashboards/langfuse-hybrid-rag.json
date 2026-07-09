@@ -1,0 +1,10 @@
+{
+  "name": "Hybrid RAG — Langfuse Overview",
+  "description": "Import into Langfuse dashboard UI",
+  "widgets": [
+    { "type": "trace_count", "filter": { "name": "rag_pipeline" } },
+    { "type": "latency_p95", "filter": { "name": "mcp.research_stream" } },
+    { "type": "cost_by_session", "groupBy": "sessionId" },
+    { "type": "score", "metadata_key": "abstained", "name": "Abstention rate" }
+  ]
+}

@@ -1,0 +1,91 @@
+# OpenTelemetry Collector — SigNoz fan-out overlay
+# Platform spec: ENTERPRISE_HYBRID_RAG_SPEC.md §10.5.2
+#
+# Usage:
+#   export SIGNOZ_OTLP_ENDPOINT=signoz-otel-collector:4317   # compose PROFILE=signoz
+#   # or managed: SIGNOZ_OTLP_ENDPOINT=ingest.{region}.signoz.cloud:443
+#
+# Mount over default config in compose when PROFILE=signoz:
+#   volumes:
+#     - ../collector/otel-collector-config.signoz.yaml:/etc/otel-collector-config.yaml:ro
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  pprof:
+    endpoint: 0.0.0.0:1777
+  zpages:
+    endpoint: 0.0.0.0:55679
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins: ["*"]
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+    send_batch_max_size: 1024
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: ${env:DEPLOY_ENV}
+        action: upsert
+      - key: service.namespace
+        value: hybrid-rag
+        action: upsert
+  # OBS-P2: truncate long query attributes before export
+  attributes/truncate:
+    actions:
+      - key: query
+        action: truncate
+        truncated_length: 120
+
+exporters:
+  debug:
+    verbosity: basic
+    sampling_initial: 5
+    sampling_thereafter: 200
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    const_labels:
+      collector: hybrid-rag-observability
+  otlp/jaeger:
+    endpoint: ${env:JAEGER_OTLP_ENDPOINT}
+    tls:
+      insecure: true
+  otlp/signoz:
+    endpoint: ${env:SIGNOZ_OTLP_ENDPOINT}
+    tls:
+      insecure: true
+
+service:
+  extensions: [health_check, pprof, zpages]
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      address: 0.0.0.0:8888
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, attributes/truncate, batch]
+      exporters: [debug, otlp/jaeger, otlp/signoz]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [prometheus, otlp/signoz, debug]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [debug]

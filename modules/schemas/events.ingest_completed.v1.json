@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hybrid-rag.local/schemas/events.ingest_completed.v1.json",
+  "title": "ingest_completed",
+  "description": "Domain event ingest.completed. SHARED_CONTRACTS.md §7.",
+  "type": "object",
+  "required": [
+    "event",
+    "schema_version",
+    "tenant_id",
+    "collection_id",
+    "version_id",
+    "job_id",
+    "chunk_count",
+    "error_count",
+    "cache_bump",
+    "timestamp"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "event": { "const": "ingest.completed" },
+    "schema_version": { "type": "integer", "const": 1 },
+    "tenant_id": { "type": "string" },
+    "collection_id": { "type": "string" },
+    "version_id": { "type": "string" },
+    "job_id": { "type": "string", "format": "uuid" },
+    "chunk_count": { "type": "integer", "minimum": 0 },
+    "error_count": { "type": "integer", "minimum": 0 },
+    "cache_bump": { "type": "boolean" },
+    "timestamp": { "type": "string", "format": "date-time" }
+  }
+}

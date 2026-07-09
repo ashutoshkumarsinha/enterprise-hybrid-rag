@@ -1,0 +1,3 @@
+# Optional Docling parser tier — pip install -r requirements-docling.txt
+# Requires base ingest requirements first
+docling>=2.0.0

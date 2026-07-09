@@ -1,0 +1,114 @@
+# hybrid-rag-query — copy to query.toml
+
+[project]
+name = "hybrid-rag-query"
+version = "1.0.0"
+
+index_schema_version = 1
+embed_dimension = 768
+qdrant_collection = "enterprise_hybrid_rag"
+
+[models]
+llm = "meta-llama/Llama-3.2-3B-Instruct"
+embed = "intfloat/e5-base-v2"
+reranker = "BAAI/bge-reranker-large"
+reranker_fast = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+inference_provider = "vllm"
+profile = "gpu_24gb"
+ollama_num_ctx = 16384
+
+[query]
+scope_mode = "auto"
+max_context_tokens = 12000
+max_answer_tokens = 2048
+query_cache_enabled = false
+skip_supervisor_when_explicit = true
+scope_rerank_mode = "dense"
+graph_enrich_enabled = true
+min_rerank_score = 0.0
+broad_recall_limit = 50
+final_recall_limit = 25
+rerank_top_k = 4
+rerank_stage1_top_n = 12
+neo4j_fulltext_enabled = false
+
+[langgraph]
+enabled = true
+# Implementation: query/app/rag_graph.py (LangGraph StateGraph)
+checkpointer = "none"
+
+[langsmith]
+tracing_enabled = true
+project = "hybrid-rag-query"
+# LANGCHAIN_API_KEY in .env — https://smith.langchain.com
+
+[performance]
+warmup_on_startup = true
+ingest_backpressure_warn_depth = 100
+ingest_backpressure_pause_depth = 1000
+connection_pool_qdrant = true
+prefer_qdrant_grpc = true
+# Full tuning: docs/PERFORMANCE.md
+
+[rate_limit]
+enabled = true
+tenant_queries_per_minute = 120
+user_queries_per_minute = 30
+max_concurrent_streams_per_user = 3
+
+[degradation]
+enabled = true
+skip_graph_at_level = 1
+skip_rerank_at_level = 2
+admission_503_at_level = 5
+
+[server]
+host = "0.0.0.0"
+port = 8010
+mcp_name = "enterprise-hybrid-rag"
+mcp_version = "1.0.0"
+
+[services]
+qdrant_url = "http://qdrant:6333"
+neo4j_bolt_url = "bolt://neo4j:7687"
+catalog_dsn_ro = "postgresql://query_ro:***@postgres:5432/catalog"
+redis_url = "redis://redis:6379/0"
+vllm_url = "http://chat-llm:8000/v1"
+vllm_embed_url = "http://embedding:8001/v1"
+reranker_url = "http://reranker:8091"
+reranker_fast_url = "http://reranker-fast:8092"
+
+[events]
+redis_stream = "rag:events"
+consumer_group = "hybrid-rag-query"
+
+[langfuse]
+enabled = true
+# Server: hybrid-rag-observability stack (observability/compose → langfuse :3000)
+# Keys: create in Langfuse UI after `cd observability && make up`
+# Env: LANGFUSE_HOST=http://langfuse:3000 LANGFUSE_PUBLIC_KEY=... LANGFUSE_SECRET_KEY=...
+
+[otel]
+enabled = true
+exporter_endpoint = "http://otel-collector:4317"
+exporter_insecure = true
+traces_exporter = "otlp"
+metrics_exporter = "none"
+logs_exporter = "none"
+deploy_env = "dev"
+
+[auth]
+required = false
+oidc_issuer = "http://keycloak:8080/realms/hybrid-rag"
+jwks_uri = "http://keycloak:8080/realms/hybrid-rag/protocol/openid-connect/certs"
+# Set required = true in production multi-tenant (FR-23, IF-6)
+
+[rbac]
+enabled = true
+# Permission strings per tool: query/docs/RBAC.md, platform §7.13
+
+[rbac.role_permissions]
+viewer = ["mcp.catalog.read", "mcp.graph.read", "mcp.session.read"]
+user = ["mcp.catalog.read", "mcp.graph.read", "mcp.session", "mcp.research"]
+collection-admin = ["mcp.catalog.read", "mcp.graph.read", "mcp.session", "mcp.research", "mcp.admin"]
+admin = ["mcp.*"]

@@ -1,0 +1,17 @@
+# Root tooling config for application sub-projects (query, ingest, inference/reranker).
+# Spec: ENTERPRISE_HYBRID_RAG_SPEC.md §23.6, docs/CODING_STANDARDS.md §2.1
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["query/app", "ingest/app", "inference/reranker"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]

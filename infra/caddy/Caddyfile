@@ -1,0 +1,6 @@
+# Placeholder — run: make render-caddy
+# Or copy from caddy/Caddyfile.example after editing config/infra.toml
+
+:80 {
+    respond "Caddy edge not configured — run make render-caddy" 503
+}

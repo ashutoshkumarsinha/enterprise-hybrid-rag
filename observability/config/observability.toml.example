@@ -1,0 +1,49 @@
+# hybrid-rag-observability — copy to observability.toml
+
+[project]
+name = "hybrid-rag-observability"
+version = "1.0.0"
+
+[langfuse]
+enabled = true
+port = 3000
+public_url = "http://localhost:3000"
+postgres_database = "langfuse"
+# Self-hosted in observability/compose — apps use LANGFUSE_HOST=http://langfuse:3000
+# API keys created in Langfuse UI → copied to query/.env (not stored here)
+
+[signoz]
+enabled = true
+ui_port = 8080
+
+[collector]
+otlp_grpc_port = 4317
+otlp_http_port = 4318
+health_port = 13133
+prometheus_port = 8889
+jaeger_ui_port = 16686
+jaeger_otlp_endpoint = "jaeger:4317"
+deploy_env = "dev"
+# Apps: OTEL_EXPORTER_OTLP_ENDPOINT=http://<host>:4317
+
+[otel]
+# See docs/OTEL.md for SDK contract and span names
+synthetic_trace_script = "scripts/synthetic-trace.sh"
+
+[performance]
+collector_memory_limit_mib = 512
+batch_timeout_seconds = 5
+batch_send_size = 512
+trace_sampling_percentage = 100      # 25 in prod
+langfuse_async_flush = true
+max_query_attribute_length = 120
+sdk_overhead_p95_budget_ms = 5
+# Tuning: docs/PERFORMANCE.md
+
+[retention]
+langfuse_days = 90
+signoz_days = 30
+
+[alerts]
+trace_export_failure_threshold_percent = 1.0
+query_ttft_p95_ms = 2000

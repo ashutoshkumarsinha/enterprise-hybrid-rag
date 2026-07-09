@@ -1,0 +1,80 @@
+# hybrid-rag-infra — copy to infra.toml
+
+[project]
+name = "hybrid-rag-infra"
+version = "1.0.0"
+profile = "default"   # default | edge
+
+embed_dimension = 768
+qdrant_collection = "enterprise_hybrid_rag"
+index_schema_version = "1"
+
+[qdrant]
+url = "http://127.0.0.1:6333"
+hnsw_m = 16
+hnsw_ef_construct = 100
+search_ef = 128
+on_disk_payload = true
+sparse_vector_name = "bm25-text"
+
+[neo4j]
+uri = "bolt://127.0.0.1:7687"
+heap_max = "4G"
+pagecache = "2G"
+
+[redis]
+url = "redis://127.0.0.1:6379/0"
+broker_db = 1
+cache_db = 0
+
+[minio]
+endpoint = "http://127.0.0.1:9000"
+console = "http://127.0.0.1:9001"
+bucket = "hybrid-rag"
+bucket_staging = "hybrid-rag-staging"
+region = "us-east-1"
+presign_ttl_seconds = 3600
+
+[minio.prefixes]
+raw = "raw"
+images = "images"
+thumbnails = "thumbnails"
+exports = "exports"
+
+[postgres]
+host = "127.0.0.1"
+port = 5432
+database = "catalog"
+
+[keycloak]
+enabled = true
+url = "http://127.0.0.1:8081"
+realm = "hybrid-rag"
+oidc_issuer = "http://127.0.0.1:8081/realms/hybrid-rag"
+admin_console = "http://127.0.0.1:8081/admin"
+client_id_mod_chat = "mod-chat"
+client_id_query = "hybrid-rag-query"
+# Docker network: http://keycloak:8080/realms/hybrid-rag
+
+[caddy]
+enabled = false
+bind_ip = "0.0.0.0"
+http_port = 8080
+https_port = 443
+site_name = "localhost"
+email = "ops@example.com"
+tls = false
+proxy_mcp = true
+mcp_path = "/mcp"
+mcp_upstream = "127.0.0.1:8010"
+mcp_bearer_token = ""
+
+[performance]
+profile = "dev"                    # dev | prod_500k | prod_2m
+qdrant_grpc_port = 6334
+qdrant_search_ef = 128
+redis_maxmemory = "256mb"
+redis_maxmemory_policy = "allkeys-lru"
+neo4j_bolt_pool_size = 50
+postgres_max_connections = 100
+# Tuning playbooks: docs/PERFORMANCE.md

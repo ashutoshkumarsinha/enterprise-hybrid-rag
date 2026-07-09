@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hybrid-rag.local/schemas/mcp_get_conversation_history.input.v1.json",
+  "title": "get_conversation_history_input",
+  "description": "MCP tool input for get_conversation_history. Spec §7.11.2.",
+  "type": "object",
+  "required": ["session_id"],
+  "additionalProperties": false,
+  "properties": {
+    "session_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string", "minLength": 1 },
+    "limit": { "type": "integer", "minimum": 1, "maximum": 200, "default": 50 },
+    "before_message_id": { "type": "string", "format": "uuid" }
+  }
+}

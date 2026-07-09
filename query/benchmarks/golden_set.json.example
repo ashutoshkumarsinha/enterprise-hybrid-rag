@@ -1,0 +1,18 @@
+[
+  {
+    "id": "pay-001",
+    "question": "How do I rotate API keys?",
+    "ground_truth": "API keys are rotated from the admin console under Settings → Security.",
+    "tenant_id": "acme-corp",
+    "collection_id": "payments-api",
+    "expect_document_id": "admin-guide"
+  },
+  {
+    "id": "pay-002",
+    "question": "What is the default rate limit for the payments API?",
+    "ground_truth": "The default rate limit is 100 requests per minute per API key.",
+    "tenant_id": "acme-corp",
+    "collection_id": "payments-api",
+    "expect_document_id": "api-reference"
+  }
+]

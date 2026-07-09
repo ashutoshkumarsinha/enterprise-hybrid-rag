@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hybrid-rag.local/schemas/mcp_research_documents.input.v1.json",
+  "title": "research_documents_input",
+  "description": "MCP tool input for research_documents. Spec §7.3.",
+  "type": "object",
+  "required": ["query"],
+  "additionalProperties": false,
+  "properties": {
+    "query": { "type": "string", "minLength": 1, "maxLength": 8000 },
+    "tenant_id": { "type": "string", "minLength": 1 },
+    "collection_id": { "type": "string" },
+    "document_id": { "type": "string" },
+    "version_id": { "type": "string" },
+    "tags": { "type": "array", "items": { "type": "string" }, "maxItems": 32 },
+    "request_id": { "type": "string" },
+    "session_id": { "type": "string", "format": "uuid" },
+    "create_session_if_missing": { "type": "boolean", "default": false },
+    "langfuse_session_id": { "type": "string" },
+    "langfuse_user_id": { "type": "string" },
+    "langfuse_trace_id": { "type": "string", "pattern": "^[a-f0-9]{32}$" }
+  }
+}

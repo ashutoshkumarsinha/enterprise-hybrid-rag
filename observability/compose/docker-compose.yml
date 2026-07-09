@@ -1,0 +1,99 @@
+# hybrid-rag-observability — standalone stack
+# Usage: docker compose -f compose/docker-compose.yml up -d
+
+name: hybrid-rag-observability
+
+networks:
+  hybrid-rag-net:
+    name: hybrid-rag-net
+    external: true
+
+volumes:
+  langfuse-postgres-data:
+  prometheus-data:
+
+services:
+  langfuse-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: ${LANGFUSE_POSTGRES_PASSWORD:-langfuse}
+      POSTGRES_DB: langfuse
+    volumes:
+      - langfuse-postgres-data:/var/lib/postgresql/data
+    networks: [hybrid-rag-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  langfuse:
+    image: langfuse/langfuse:2
+    depends_on:
+      langfuse-postgres:
+        condition: service_healthy
+    ports:
+      - "${LANGFUSE_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgresql://langfuse:${LANGFUSE_POSTGRES_PASSWORD:-langfuse}@langfuse-postgres:5432/langfuse
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-change-me-in-production}
+      SALT: ${LANGFUSE_SALT:-change-me-in-production}
+      NEXTAUTH_URL: ${LANGFUSE_PUBLIC_URL:-http://localhost:3000}
+      TELEMETRY_ENABLED: "false"
+    networks: [hybrid-rag-net]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/public/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.58
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "${JAEGER_UI_PORT:-16686}:16686"
+    networks: [hybrid-rag-net]
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    depends_on:
+      - jaeger
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-dev}
+      JAEGER_OTLP_ENDPOINT: ${JAEGER_OTLP_ENDPOINT:-jaeger:4317}
+      SIGNOZ_OTLP_ENDPOINT: ${SIGNOZ_OTLP_ENDPOINT:-signoz-otel-collector:4317}
+    volumes:
+      - ${COLLECTOR_CONFIG:-../collector/otel-collector-config.yaml}:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "${OTLP_GRPC_PORT:-4317}:4317"
+      - "${OTLP_HTTP_PORT:-4318}:4318"
+      - "8889:8889"
+      - "13133:13133"
+    networks: [hybrid-rag-net]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:13133/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    profiles: ["metrics"]
+    volumes:
+      - ../collector/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    networks: [hybrid-rag-net]
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+
+  signoz-otel-collector:
+    image: signoz/signoz-otel-collector:0.88.12
+    profiles: ["signoz"]
+    networks: [hybrid-rag-net]

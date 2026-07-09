@@ -1,0 +1,77 @@
+name: hybrid-rag-ingest
+
+networks:
+  hybrid-rag-net:
+    name: hybrid-rag-net
+    external: true
+
+services:
+  orchestrator:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "${ORCHESTRATOR_PORT:-8020}:8020"
+    environment:
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/1}
+      QDRANT_URL: ${QDRANT_URL:-http://qdrant:6333}
+      NEO4J_URI: ${NEO4J_URI:-bolt://neo4j:7687}
+      CATALOG_DSN: ${CATALOG_DSN}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-hybrid-rag-ingest}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-change-me-ingest-minio}
+      MINIO_BUCKET: ${MINIO_BUCKET:-hybrid-rag}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
+      OTEL_EXPORTER_OTLP_INSECURE: ${OTEL_EXPORTER_OTLP_INSECURE:-true}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-hybrid-rag-ingest}
+      OTEL_TRACES_EXPORTER: otlp
+      DEPLOY_ENV: ${DEPLOY_ENV:-dev}
+    volumes:
+      - ${DOCUMENTS_SOURCE_DIR:-../data/sources}:/data/sources:ro
+    networks: [hybrid-rag-net]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8020/admin/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    build:
+      context: ..
+      dockerfile: Dockerfile.worker
+    environment:
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/1}
+      CELERY_CONCURRENCY: ${CELERY_CONCURRENCY:-4}
+      QDRANT_URL: ${QDRANT_URL:-http://qdrant:6333}
+      NEO4J_URI: ${NEO4J_URI:-bolt://neo4j:7687}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-hybrid-rag-ingest}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-change-me-ingest-minio}
+      MINIO_BUCKET: ${MINIO_BUCKET:-hybrid-rag}
+      MINIO_BUCKET_STAGING: ${MINIO_BUCKET_STAGING:-hybrid-rag-staging}
+      VLLM_EMBED_URL: ${VLLM_EMBED_URL:-http://embedding:8001/v1}
+      VLLM_VISION_URL: ${VLLM_VISION_URL:-http://vision-llm:8002/v1}
+      CATALOG_DSN: ${CATALOG_DSN}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
+      OTEL_EXPORTER_OTLP_INSECURE: ${OTEL_EXPORTER_OTLP_INSECURE:-true}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-hybrid-rag-ingest-worker}
+      OTEL_TRACES_EXPORTER: otlp
+      DEPLOY_ENV: ${DEPLOY_ENV:-dev}
+    volumes:
+      - ${DOCUMENTS_SOURCE_DIR:-../data/sources}:/data/sources:ro
+    networks: [hybrid-rag-net]
+    depends_on:
+      orchestrator:
+        condition: service_healthy
+
+  beat:
+    build:
+      context: ..
+      dockerfile: Dockerfile.worker
+    profiles: ["beat"]
+    command: ["celery", "-A", "app.tasks:celery_app", "beat", "--loglevel=info"]
+    environment:
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/1}
+    networks: [hybrid-rag-net]
+    depends_on:
+      - worker

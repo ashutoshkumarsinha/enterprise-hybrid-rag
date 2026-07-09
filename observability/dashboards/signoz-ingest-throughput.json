@@ -1,0 +1,23 @@
+{
+  "title": "Hybrid RAG — Ingest Throughput",
+  "description": "SigNoz dashboard stub — platform spec §10.5.5. Import via SigNoz UI; panels reference §10.5.3 metrics.",
+  "version": "1",
+  "spec_version": "hybrid-rag-obs-v1.0.0",
+  "panels": [
+    {
+      "title": "Chunks per second",
+      "type": "graph",
+      "query": "ingest_chunks_per_second"
+    },
+    {
+      "title": "Celery queue depth",
+      "type": "graph",
+      "query": "celery_queue_depth"
+    },
+    {
+      "title": "Qdrant search latency p95",
+      "type": "graph",
+      "query": "histogram_quantile(0.95, sum(rate(qdrant_search_latency_ms_bucket[5m])) by (le))"
+    }
+  ]
+}

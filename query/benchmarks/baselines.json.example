@@ -1,0 +1,35 @@
+{
+  "profile": "gpu_24gb",
+  "index_schema_version": 1,
+  "collection_chunks": 100000,
+  "updated": "2026-07-09",
+  "rag": {
+    "total_p95_ms": 8500,
+    "retrieval_only_p95_ms": 420,
+    "ttft_p95_ms": 1800,
+    "stages_p95_ms": {
+      "supervisor": 0,
+      "embed": 75,
+      "scope": 15,
+      "retrieve": 120,
+      "rerank": 280,
+      "graph": 85,
+      "answer_first_token": 750
+    },
+    "scope_accuracy": 0.92,
+    "cache_hit_rate": 0.0
+  },
+  "ingest": {
+    "mock_chunks_per_min": 1200,
+    "live_chunks_per_second": 55,
+    "dedup_skip_rate": 0.35
+  },
+  "regression_thresholds": {
+    "rag_total_p95_ratio_max": 1.25,
+    "retrieval_p95_ratio_max": 1.25,
+    "ttft_p95_ratio_max": 1.1,
+    "ingest_mock_min_ratio": 0.8,
+    "ingest_live_min_ratio": 0.9,
+    "scope_accuracy_min_delta": -0.02
+  }
+}

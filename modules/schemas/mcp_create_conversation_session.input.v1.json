@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hybrid-rag.local/schemas/mcp_create_conversation_session.input.v1.json",
+  "title": "create_conversation_session_input",
+  "description": "MCP tool input for create_conversation_session. Spec §7.11.2.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "tenant_id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "maxLength": 256 },
+    "collection_id": { "type": "string" },
+    "document_id": { "type": "string" },
+    "version_id": { "type": "string" },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "maxProperties": 32
+    }
+  }
+}

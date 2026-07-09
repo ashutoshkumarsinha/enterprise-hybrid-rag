@@ -1,0 +1,28 @@
+{
+  "title": "Hybrid RAG — Query Latency",
+  "description": "SigNoz dashboard stub — platform spec §10.5.5. Import via SigNoz UI; panels reference §10.5.3 metrics.",
+  "version": "1",
+  "spec_version": "hybrid-rag-obs-v1.0.0",
+  "panels": [
+    {
+      "title": "TTFT p95",
+      "type": "graph",
+      "query": "histogram_quantile(0.95, sum(rate(rag_ttft_ms_bucket[5m])) by (le))"
+    },
+    {
+      "title": "Stage latency p95",
+      "type": "graph",
+      "query": "histogram_quantile(0.95, sum(rate(rag_stage_ms_bucket[5m])) by (le, stage))"
+    },
+    {
+      "title": "MCP request duration",
+      "type": "graph",
+      "query": "histogram_quantile(0.95, sum(rate(mcp_request_duration_ms_bucket[5m])) by (le, tool))"
+    },
+    {
+      "title": "Cache hit rate",
+      "type": "stat",
+      "query": "sum(rate(query_cache_hit_total[5m])) / (sum(rate(query_cache_hit_total[5m])) + sum(rate(query_cache_miss_total[5m])))"
+    }
+  ]
+}

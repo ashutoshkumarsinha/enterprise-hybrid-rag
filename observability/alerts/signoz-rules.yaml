@@ -1,0 +1,52 @@
+# SigNoz alert rules — platform spec §10.5.6
+# Import via SigNoz UI or alertmanager integration (E-23 automation pending).
+#
+# Metric names MUST match ENTERPRISE_HYBRID_RAG_SPEC.md §10.5.3.
+
+groups:
+  - name: hybrid-rag-query
+    rules:
+      - alert: QueryP95High
+        expr: histogram_quantile(0.95, sum(rate(rag_ttft_ms_bucket[5m])) by (le)) > 2000
+        for: 5m
+        labels:
+          severity: warning
+          plane: query
+        annotations:
+          summary: RAG time-to-first-token p95 exceeds 2s
+          description: TTFT p95 > 2000ms for 5 minutes. Check inference cold start and retrieve latency.
+
+      - alert: McpErrorRateHigh
+        expr: |
+          sum(rate(mcp_request_duration_ms_count{status=~"5.."}[5m]))
+          / sum(rate(mcp_request_duration_ms_count[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          plane: query
+        annotations:
+          summary: MCP error rate above 1%
+
+  - name: hybrid-rag-ingest
+    rules:
+      - alert: IngestStalled
+        expr: celery_queue_depth > 500
+        for: 5m
+        labels:
+          severity: warning
+          plane: ingest
+        annotations:
+          summary: Celery queue depth exceeds 500
+
+  - name: hybrid-rag-observability
+    rules:
+      - alert: TraceExportFailure
+        expr: |
+          sum(rate(otel_export_errors_total[5m])) by (exporter)
+          / sum(rate(otel_exporter_sent_spans[5m])) by (exporter) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          plane: observability
+        annotations:
+          summary: OTLP export failure rate above 1%

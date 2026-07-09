@@ -1,0 +1,88 @@
+# hybrid-rag-ingest — copy to ingest.toml
+
+[project]
+name = "hybrid-rag-ingest"
+version = "1.0.0"
+
+index_schema_version = 1
+embed_dimension = 768
+qdrant_collection = "enterprise_hybrid_rag"
+
+[ingest]
+batch_size = 32
+celery_concurrency = 4
+embed_parallelism = 4
+defer_vlm = true
+parse_workers = 2
+max_chunk_tokens = 512
+chunk_overlap_tokens = 64
+qdrant_upsert_batch = 100
+neo4j_unwind_batch = 50
+dedup_mget_batch = 100
+ingest_max_chunks_per_minute = 0   # 0 = unlimited; set during peak query hours (NFR-18)
+ingest_backpressure_pause_depth = 1000
+
+[parsers]
+profile = "auto"                   # fast | docling | auto
+docling_enabled = true
+docling_formats = ["pdf", "docx", "pptx"]
+docling_off_peak_only = false
+docling_max_pages = 500
+# Detail: docs/PARSERS.md, docs/DOCLING.md
+
+[performance]
+off_peak_cron = "0 22 * * *"       # optional: schedule bulk reindex
+backpressure_warn_queue_depth = 100
+embed_batch_required = true        # FR-26
+
+[orchestrator]
+host = "0.0.0.0"
+port = 8020
+
+[paths]
+documents_source_dir = "/data/sources"
+
+[services]
+qdrant_url = "http://qdrant:6333"
+neo4j_bolt_url = "bolt://neo4j:7687"
+catalog_dsn = "postgresql://ingest_rw:***@postgres:5432/catalog"
+redis_host = "redis"
+redis_celery_db = 1
+redis_dedup_db = 0
+redis_jobs_db = 0
+minio_endpoint = "http://minio:9000"
+minio_bucket = "hybrid-rag"
+minio_bucket_staging = "hybrid-rag-staging"
+minio_region = "us-east-1"
+
+[minio.prefixes]
+raw = "raw"
+images = "images"
+thumbnails = "thumbnails"
+vllm_embed_url = "http://embedding:8001/v1"
+vllm_vision_url = "http://vision-llm:8002/v1"
+
+[events]
+redis_stream = "rag:events"
+redis_url = "redis://redis:6379/0"
+
+[connectors]
+filesystem_enabled = true
+s3_enabled = false
+sharepoint_enabled = false
+connector_sync_interval_minutes = 60
+
+[models]
+embed = "intfloat/e5-base-v2"
+vision = "Qwen/Qwen2-VL-7B-Instruct"
+
+[otel]
+enabled = true
+exporter_endpoint = "http://otel-collector:4317"
+exporter_insecure = true
+traces_exporter = "otlp"
+metrics_exporter = "none"
+logs_exporter = "none"
+deploy_env = "dev"
+service_name = "hybrid-rag-ingest"
+worker_service_name = "hybrid-rag-ingest-worker"

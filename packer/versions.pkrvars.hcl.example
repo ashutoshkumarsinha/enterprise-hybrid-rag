@@ -1,0 +1,4 @@
+# Copy to versions.pkrvars.hcl or pass via -var-file from repo root build-all.sh
+image_tag = "dev"
+registry  = ""          # e.g. "ghcr.io/myorg" — empty for local tags only
+push      = false       # set true to run docker-push post-processor (requires registry login)

@@ -1,0 +1,81 @@
+name: hybrid-rag-inference
+
+networks:
+  hybrid-rag-net:
+    name: hybrid-rag-net
+    external: true
+
+x-gpu: &gpu
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: 1
+            capabilities: [gpu]
+
+services:
+  chat-llm:
+    image: vllm/vllm-openai:v0.6.6
+    profiles: ["gpu_24gb", "a100_80gb"]
+    <<: *gpu
+    command: >
+      --model ${CHAT_LLM_MODEL}
+      --served-model-name ${CHAT_LLM_MODEL}
+      --host 0.0.0.0 --port 8000
+      --max-model-len 16384
+      --gpu-memory-utilization 0.90
+    ports: ["${CHAT_LLM_PORT:-8000}:8000"]
+    networks: [hybrid-rag-net]
+
+  embedding:
+    image: vllm/vllm-openai:v0.6.6
+    profiles: ["dev", "gpu_24gb", "a100_80gb"]
+    command: >
+      --model ${EMBED_MODEL}
+      --served-model-name ${EMBED_MODEL}
+      --task embed
+      --host 0.0.0.0 --port 8001
+    ports: ["${EMBED_PORT:-8001}:8001"]
+    networks: [hybrid-rag-net]
+
+  vision-llm:
+    image: vllm/vllm-openai:v0.6.6
+    profiles: ["gpu_24gb", "a100_80gb"]
+    <<: *gpu
+    command: >
+      --model ${VISION_MODEL}
+      --served-model-name ${VISION_MODEL}
+      --host 0.0.0.0 --port 8002
+      --max-model-len 8192
+    ports: ["${VISION_PORT:-8002}:8002"]
+    networks: [hybrid-rag-net]
+
+  smoke-llm:
+    image: vllm/vllm-openai:v0.6.6
+    profiles: ["dev"]
+    command: >
+      --model ${SMOKE_LLM_MODEL}
+      --served-model-name ${SMOKE_LLM_MODEL}
+      --host 0.0.0.0 --port 8011
+      --max-model-len 4096
+    ports: ["${SMOKE_LLM_PORT:-8011}:8011"]
+    networks: [hybrid-rag-net]
+
+  reranker:
+    build: ../reranker
+    profiles: ["dev", "gpu_24gb", "a100_80gb"]
+    environment:
+      RERANKER_MODEL: ${RERANKER_MODEL}
+      PORT: "8091"
+    ports: ["${RERANKER_PORT:-8091}:8091"]
+    networks: [hybrid-rag-net]
+
+  reranker-fast:
+    build: ../reranker
+    profiles: ["dev", "gpu_24gb", "a100_80gb"]
+    environment:
+      RERANKER_MODEL: ${RERANKER_FAST_MODEL}
+      PORT: "8092"
+    ports: ["${RERANKER_FAST_PORT:-8092}:8092"]
+    networks: [hybrid-rag-net]
