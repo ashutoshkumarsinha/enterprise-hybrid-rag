@@ -1,9 +1,9 @@
 # Enterprise Hybrid RAG — Product Specification
 
-**Status:** Draft v0.25 (MCP query RBAC)  
+**Status:** Draft v0.26 (MCP token-based RBAC)  
 **Audience:** Platform engineers, solution architects, security reviewers  
 **Scope:** Document-agnostic ingestion, hybrid retrieval, graph enrichment, MCP-first API, enterprise chat UI  
-**Changelog:** v0.25 — **MCP query RBAC** (§7.13, §9.4), permission matrix, Keycloak role mapping, FR-44–46; v0.24 — MCP session persistence §7.11; v0.23 — SigNoz §10.5; v0.22 — catalog DDL, JSON schemas, IF-6; v0.21 — coding standards; v0.20 — implementation inventory
+**Changelog:** v0.26 — **token-based MCP RBAC** — `rag_mcp_*` Bearer tokens carry permissions (§7.13), `mcp_access_tokens` DDL, FR-23/45/47–48; v0.25 — RBAC permission matrix; v0.24 — sessions §7.11; v0.23 — SigNoz §10.5; v0.22 — catalog DDL, IF-6
 
 > **Note:** This document is the **platform overview**. Module-specific normative specs live in [`modules/`](./modules/) and sub-project `SPEC.md` files. The **enhancement roadmap** is in [`docs/SPEC_ROADMAP.md`](./docs/SPEC_ROADMAP.md). **Performance tuning** is in [`docs/PERFORMANCE.md`](./docs/PERFORMANCE.md). **Testing & TDD** is in [`docs/TESTING.md`](./docs/TESTING.md). **Documentation standards** are in [`docs/DOCUMENTATION.md`](./docs/DOCUMENTATION.md). **Coding standards** are in [`docs/CODING_STANDARDS.md`](./docs/CODING_STANDARDS.md) §23. **What to spec next** is in §22. **What exists on disk today** is in §1.4.
 
@@ -266,7 +266,7 @@ Until release train `rag-v1.0`, stub services **MUST** be identifiable in respon
 | FR-20 | Sub-projects MUST communicate only via shared contracts — no direct imports across `query` / `ingest` / `infra` / `inference` / `observability` | Architecture review + package boundary lint |
 | FR-21 | `hybrid-rag-ingest` MUST NOT expose MCP tools or HTTP query routes | Ingest admin API only |
 | FR-22 | `hybrid-rag-query` MUST NOT enqueue Celery ingest tasks or parse source files | Read-only on index stores + catalog |
-| FR-23 | Production MCP MUST validate caller identity via OIDC JWT (Keycloak JWKS) or config-enforced bearer | Anonymous `/sse` disabled when `auth.required=true` |
+| FR-23 | Production MCP MUST validate **`Authorization: Bearer`** — **MCP access token** (`rag_mcp_*`, §7.13) or OIDC JWT when `auth.jwt_bridge=true` | Anonymous `/sse` disabled when `auth.required=true` |
 | FR-24 | JWT `sub` MUST map to catalog principal `user:{sub}` for ACL resolution | Contract test with frozen ACL fixture |
 | FR-25 | Query pipeline MUST reuse a single pooled client per store (Qdrant, Neo4j, Redis, HTTP inference) | No per-request client construction after warmup |
 | FR-26 | Ingest workers MUST batch embed when `len(chunks) > 1` and provider supports batch API | Reduces embed round-trips; enforced in `benchmark_ingest.py` |
@@ -288,8 +288,10 @@ Until release train `rag-v1.0`, stub services **MUST** be identifiable in respon
 | FR-42 | `research_documents` and `POST /research/stream` with `session_id` MUST load prior turns, run RAG, and append user + assistant messages atomically | §6.13.7; contract tests |
 | FR-43 | Session read/write MUST enforce `tenant_id` + principal (`user:{sub}`) — cross-user session access returns 404 | §7.11.4; ACL on sessions |
 | FR-44 | Every MCP tool and protected HTTP route MUST enforce RBAC when `[rbac].enabled = true` — deny before handler execution | §7.13; `query/app/rbac.py` |
-| FR-45 | RBAC role resolution MUST use JWT `realm_access.roles` (and optional `resource_access`) mapped to permission strings per §7.13.3 | Keycloak realm; contract tests |
-| FR-46 | Data access (ACL) MUST be evaluated **after** RBAC passes — RBAC gates *actions*; ACL gates *corpus visibility* (FR-03) | §9.4 evaluation order |
+| FR-45 | RBAC permissions MUST come from **MCP token** `permissions[]` when Bearer is `rag_mcp_*`; JWT path MAY use `[rbac.role_templates]` when `jwt_bridge=true` | `mcp_access_tokens` §4.4.3 |
+| FR-46 | Data access (ACL) MUST be evaluated **after** RBAC passes | §9.4 |
+| FR-47 | MCP token secrets MUST be stored **hashed** (SHA-256); plaintext shown **once** at mint | §7.13.3 |
+| FR-48 | Revoked or expired MCP tokens MUST return 401 | `revoked_at`, `expires_at` |
 
 ### 2.4 Non-functional requirements
 
@@ -820,7 +822,15 @@ psql "$CATALOG_DSN" -f ingest/migrations/002_conversation_sessions_v1.sql
 
 **Retention:** `sessions.max_age_days` (default 90) — nightly prune job (E-36). **Quota:** `sessions.max_per_principal` (default 100 active sessions per user).
 
-**DSN:** Query uses `CATALOG_DSN_SESSION` (role `query_session_rw`) for session writes; `CATALOG_DSN_RO` for catalog reads.
+**DSN:** Query uses `CATALOG_DSN_SESSION` for sessions; `CATALOG_DSN_TOKEN` for `mcp_access_tokens`; `CATALOG_DSN_RO` for catalog reads.
+
+#### 4.4.3 MCP access token DDL (v1)
+
+**Migration:** [`ingest/migrations/003_mcp_access_tokens_v1.sql`](./ingest/migrations/003_mcp_access_tokens_v1.sql)
+
+| Table | PK | Columns |
+|-------|-----|---------|
+| `mcp_access_tokens` | `token_id` UUID | `tenant_id`, `principal`, `permissions` JSONB, `secret_hash`, `expires_at`, `revoked_at` |
 
 ### 4.5 Qdrant collection schema
 
@@ -1852,37 +1862,35 @@ sequenceDiagram
 
 **Dev mode:** `auth.required=false` — no JWT; `tenant_id` from MCP args only (never in production MT).
 
-**Prod mode:** Reject requests without valid JWT when `auth.required=true`; map `sub` per IF-6.
+**Prod mode:** Valid `rag_mcp_*` Bearer required (or JWT when `jwt_bridge=true`); `tenant_id` and `principal` from token row.
 
 #### 7.10.1 Auth layering decision tree
 
 ```mermaid
 flowchart TD
     REQ[Incoming MCP or /research/stream request]
-    REQ --> EDGE{Caddy edge enabled?}
-    EDGE -->|yes| BEARER{Valid Caddy static bearer?}
-    BEARER -->|no| REJECT1[401 at edge]
-    BEARER -->|yes| APP
-    EDGE -->|no direct :8010| APP[hybrid-rag-query]
+    REQ --> APP[hybrid-rag-query]
     APP --> AUTH{auth.required?}
-    AUTH -->|false dev| TENANT[tenant_id from args only]
-    AUTH -->|true prod| JWT{Valid OIDC JWT via JWKS?}
-    JWT -->|no| REJECT2[401 invalid_token]
-    JWT -->|yes| CLAIMS[Extract sub tenant_id roles]
-    CLAIMS --> RBAC{RBAC permission OK?}
-    RBAC -->|no| REJECT3[403 forbidden]
+    AUTH -->|false dev| TENANT[tenant_id from args]
+    AUTH -->|true prod| HDR{Bearer prefix?}
+    HDR -->|rag_mcp_*| TOK[Validate token row + permissions]
+    HDR -->|JWT + jwt_bridge| JWT[JWKS + role templates]
+    HDR -->|other| REJECT1[401]
+    TOK --> RBAC{Tool permission?}
+    JWT --> RBAC
+    RBAC -->|no| REJECT2[403]
     RBAC -->|yes| ACL[ACL + rate limits]
-    TENANT --> RBAC
+    TENANT --> ACL
     ACL --> RAG[run_rag_pipeline]
 ```
 
-| Layer | Sufficient for | Not sufficient for |
-|-------|----------------|-------------------|
-| Caddy static bearer | Service-to-service, dev SSE | Per-user ACL (OD5) |
-| OIDC JWT | User-level ACL, audit `sub` | — |
-| Both | Enterprise MT default | — |
+| Credential | Use |
+|------------|-----|
+| **`rag_mcp_*`** | **Primary** — auth + RBAC on token row (§7.13) |
+| OIDC JWT | Optional mod-chat bridge |
+| Caddy static bearer | Optional edge only (OD5) |
 
-**Decision (OQ5):** JWT validation **inline** in `hybrid-rag-query` via JWKS fetch — no auth sidecar for v1.
+**Decision (OQ5):** Token + optional JWT validation **inline** in query — no auth sidecar.
 
 ### 7.11 Conversation sessions (persistence & management)
 
@@ -2064,156 +2072,141 @@ Rate limits apply at **hybrid-rag-query** — not only mod-chat BFF (FR-27). Dir
 
 **Enterprise tiers:** Override defaults via catalog `tenant_quotas` (§9.3) — `regulated` tier may have lower QPS but dedicated inference pool.
 
-### 7.13 Role-Based Access Control (RBAC)
+### 7.13 Role-Based Access Control — token-based (MCP)
 
-> **Detail:** [`query/docs/RBAC.md`](./query/docs/RBAC.md) · **Identity:** §9.2, IF-6 · **Data ACL:** §9.4
+> **Detail:** [`query/docs/RBAC.md`](./query/docs/RBAC.md) · **DDL:** §4.4.3 · **ACL:** §9.4
 
-**RBAC** controls **which MCP tools and HTTP routes** a caller may invoke. **ACL** (§9.4) controls **which collections/documents** appear in retrieval results. Both MUST pass for a successful research query.
+**MCP query uses token-based RBAC:** callers present `Authorization: Bearer rag_mcp_{token_id}.{secret}`. The token record carries **`tenant_id`**, **`principal`**, and **`permissions[]`** — RBAC is enforced from the token, not from live Keycloak lookups per request.
 
-#### 7.13.1 RBAC vs ACL
+OIDC JWT remains an **optional bridge** for mod-chat when `auth.jwt_bridge=true` (§7.13.6).
 
-| Layer | Question | Source | Deny behavior |
-|-------|----------|--------|---------------|
-| **Authentication** | Who is the caller? | OIDC JWT / dev bearer | 401 `auth` |
-| **RBAC** | Which actions may they perform? | Keycloak roles → permissions (§7.13.3) | 403 `forbidden` |
-| **ACL** | Which corpus may they read? | `acl_grants` + chunk `acl_principal` | Empty results (FR-03) |
-| **Quotas / rate limits** | Within tenant budget? | Redis + `tenant_quotas` | 429 / 403 |
+#### 7.13.1 Why tokens for MCP
+
+| Approach | MCP hosts (Cursor, Claude Desktop) | mod-chat BFF |
+|----------|-----------------------------------|--------------|
+| OIDC PKCE per request | Poor fit | Natural for login |
+| **`rag_mcp_*` access token** | **Primary** | Mint per user; forward Bearer |
+| Caddy static bearer | Edge gate only | Dev/S2S |
+
+#### 7.13.2 Auth + RBAC flow
 
 ```mermaid
 flowchart TD
-    REQ[MCP tool or HTTP request]
-    REQ --> AUTH{JWT valid?}
-    AUTH -->|no| E401[401 auth]
-    AUTH -->|yes| RBAC{RBAC permission?}
+    REQ[MCP / HTTP request]
+    REQ --> HDR{Authorization Bearer?}
+    HDR -->|no| E401[401 auth]
+    HDR -->|rag_mcp_*| TOK[Lookup mcp_access_tokens]
+    TOK -->|invalid/expired/revoked| E401
+    TOK -->|ok| CTX[AuthContext from token row]
+    HDR -->|JWT + jwt_bridge| JWT[Validate JWKS → map roles]
+    JWT --> CTX
+    CTX --> RBAC{permission for tool?}
     RBAC -->|no| E403[403 forbidden]
-    RBAC -->|yes| RL{Rate limit OK?}
-    RL -->|no| E429[429]
-    RL -->|yes| HANDLER[Tool handler / pipeline]
-    HANDLER --> ACL[ACL filter on retrieve]
-    ACL --> RESP[Response]
+    RBAC -->|yes| RL[Rate limit → handler → ACL]
 ```
 
-**Evaluation order (normative):** authenticate → RBAC → rate limit → handler → ACL at retrieve → answer.
+#### 7.13.3 MCP access token format
 
-#### 7.13.2 Permission strings
+```text
+rag_mcp_{token_id}.{secret}
+```
 
-Permissions are stable capability strings — mapped from Keycloak roles in config. Tool handlers check **permissions**, not raw role names.
+| Part | Notes |
+|------|-------|
+| `token_id` | UUID — DB PK; safe in logs |
+| `secret` | Random — SHA-256 hashed at rest; **never logged** |
 
-| Permission | Description |
-|------------|-------------|
-| `mcp.research` | Run RAG (`research_documents`, `/research/stream`) |
+```http
+Authorization: Bearer rag_mcp_550e8400-e29b-41d4-a716-446655440000.x7K9mN2pQ8vR4sT1wY6zA3bC5dE0fG
+```
+
+Validation: lookup row → constant-time hash compare → build `AuthContext` from **`permissions` on the row**.
+
+#### 7.13.4 Permission strings
+
+| Permission | Tools / routes |
+|------------|----------------|
+| `mcp.research` | `research_documents`, `/research/stream` |
 | `mcp.catalog.read` | `list_indexed_documents`, `get_document_metadata` |
 | `mcp.graph.read` | `visualize_document_graph` |
-| `mcp.session.read` | `list_conversation_sessions`, `get_conversation_history`, `GET /sessions*` |
-| `mcp.session.write` | `create/update/delete` session, `session_id` append on research |
+| `mcp.session.read` / `.write` | Session tools, `/sessions*` |
 | `mcp.admin.collections` | `list_collections` |
 | `mcp.admin.diagnostics` | `search_snippets`, `explain_scope` |
+| `mcp.admin.tokens` | Mint / revoke / list tokens |
 
-Wildcard: `mcp.admin` grants both admin permissions. `mcp.session` grants read + write.
+Wildcards: `mcp.admin`, `mcp.session`, `mcp.*`.
 
-#### 7.13.3 Keycloak role → permission matrix (default)
+#### 7.13.5 Role templates (mint-time only)
 
-Realm: `hybrid-rag` — [`infra/keycloak/hybrid-rag-realm.json`](./infra/keycloak/hybrid-rag-realm.json)
+Templates expand to `permissions[]` **when the token is created** — frozen until revoked.
 
-| Realm role | Permissions granted | Typical persona |
-|------------|---------------------|-----------------|
-| `viewer` | `mcp.catalog.read`, `mcp.graph.read`, `mcp.session.read` | Read-only catalog / graph browse |
-| `user` | All `viewer` + `mcp.research`, `mcp.session` | Standard researcher |
-| `collection-admin` | All `user` + `mcp.admin.collections`, `mcp.admin.diagnostics` | Corpus owner / team lead |
-| `admin` | **All** permissions (`mcp.*` wildcard) | Platform operator |
+| Template | Permissions |
+|----------|-------------|
+| `viewer` | catalog.read, graph.read, session.read |
+| `user` | viewer + research + session |
+| `collection-admin` | user + `mcp.admin` |
+| `admin` | `mcp.*` |
 
-**Rule:** Union permissions from **all** roles in `realm_access.roles`. Unknown roles grant nothing.
+**Mint** (`POST /admin/mcp/tokens`, requires `mcp.admin.tokens`):
 
-**Service accounts (client credentials):** JWT `clientId` → principal `service:{client_id}`. Default grant: `mcp.research` + `mcp.catalog.read` only — extend via Keycloak client role mapper (E-37).
-
-#### 7.13.4 Tool and route permission map
-
-| MCP tool / HTTP route | Required permission(s) |
-|-----------------------|------------------------|
-| `research_documents` | `mcp.research` |
-| `POST /research/stream` | `mcp.research` |
-| `list_indexed_documents` | `mcp.catalog.read` |
-| `get_document_metadata` | `mcp.catalog.read` |
-| `visualize_document_graph` | `mcp.graph.read` |
-| `create_conversation_session` | `mcp.session.write` |
-| `list_conversation_sessions` | `mcp.session.read` |
-| `get_conversation_history` | `mcp.session.read` |
-| `update_conversation_session` | `mcp.session.write` |
-| `delete_conversation_session` | `mcp.session.write` |
-| `POST/GET/PATCH/DELETE /sessions*` | Same as session tools |
-| `list_collections` | `mcp.admin.collections` |
-| `search_snippets` | `mcp.admin.diagnostics` |
-| `explain_scope` | `mcp.admin.diagnostics` |
-| `GET /healthz` | **None** (public probe) |
-
-#### 7.13.5 Implementation
-
-| Module | Responsibility |
-|--------|----------------|
-| `query/app/auth.py` | JWT validation, claim extraction, `AuthContext` |
-| `query/app/rbac.py` | `require_permission(ctx, permission)` → 403 |
-| `query/app/mcp_server.py` | Decorator / pre-hook on each tool registration |
-| `query/app/acl.py` (planned) | Principal set + Qdrant filter (FR-03) |
-
-**`AuthContext` (normative fields):**
-
-```python
-@dataclass(frozen=True)
-class AuthContext:
-    sub: str
-    tenant_id: str
-    roles: frozenset[str]           # realm_access.roles
-    permissions: frozenset[str]     # resolved from roles
-    principal: str                  # user:{sub} or service:{client_id}
+```json
+{
+  "tenant_id": "acme-corp",
+  "principal": "user:alice",
+  "label": "Alice Cursor",
+  "role_template": "user",
+  "expires_in_days": 90
+}
 ```
 
-**Config (`query.toml`):**
+Response includes `access_token` **once**. Bootstrap: `python -m app.cli mint-mcp-token --template admin`.
+
+#### 7.13.6 OIDC JWT bridge (optional)
+
+When `auth.jwt_bridge=true`, Keycloak JWTs are accepted; `realm_access.roles` → permissions via `[rbac.role_templates]` at **request time** (unlike frozen token permissions).
+
+#### 7.13.7 Tool permission map
+
+| Tool / route | Permission |
+|--------------|------------|
+| `research_documents`, `/research/stream` | `mcp.research` |
+| Catalog tools | `mcp.catalog.read` |
+| `visualize_document_graph` | `mcp.graph.read` |
+| Session tools | `mcp.session.read` / `.write` |
+| Admin tools | `mcp.admin.*` |
+| Token admin | `mcp.admin.tokens` |
+| `GET /healthz` | none |
+
+#### 7.13.8 Implementation
+
+| Module | Role |
+|--------|------|
+| `token_store.py` | Mint, validate, revoke |
+| `auth.py` | Parse Bearer; token or JWT |
+| `rbac.py` | `require_permission(ctx, perm)` |
 
 ```toml
+[auth]
+required = true
+jwt_bridge = true
+mcp_token_prefix = "rag_mcp_"
+
 [rbac]
 enabled = true
-# When false (dev): all authenticated users get all permissions; auth.required may still be false
 
-[rbac.role_permissions]
-viewer = ["mcp.catalog.read", "mcp.graph.read", "mcp.session.read"]
+[rbac.role_templates]
 user = ["mcp.catalog.read", "mcp.graph.read", "mcp.session", "mcp.research"]
-collection-admin = ["mcp.catalog.read", "mcp.graph.read", "mcp.session", "mcp.research", "mcp.admin"]
 admin = ["mcp.*"]
 ```
 
-**Dev modes:**
+#### 7.13.9 Errors
 
-| `auth.required` | `rbac.enabled` | Behavior |
-|-----------------|----------------|----------|
-| false | false | Open tools; `tenant_id` from args (local only) |
-| false | true | RBAC skipped — warn log (not prod) |
-| true | false | Authenticated users get all permissions |
-| true | true | **Production default** — full RBAC |
+| Condition | Code |
+|-----------|------|
+| Missing/invalid/revoked token | 401 `auth` |
+| Valid token, missing permission | 403 `forbidden` |
 
-#### 7.13.6 Error contract
-
-| Condition | HTTP | MCP / SSE `error.kind` | Message pattern |
-|-----------|------|------------------------|-----------------|
-| No token | 401 | `auth` | Authentication required |
-| Bad token | 401 | `auth` | Invalid or expired token |
-| Missing permission | 403 | `forbidden` | Insufficient permission for this operation |
-| Missing `tenant_id` | 403 | `auth` | Tenant claim required |
-
-**Audit:** Log `mcp.authz.denied` with `tool`, `sub`, `required_permission`, `roles` — never log JWT.
-
-**OTel:** Span `mcp.authz.check` with attributes `authz.permission`, `authz.allowed`, `authz.roles`.
-
-#### 7.13.7 Collection-scoped roles (optional extension)
-
-For teams that need **role assignment per collection** without full platform admin:
-
-| Mechanism | v1 support |
-|-----------|------------|
-| Catalog `acl_grants` with `principal: group:{team}` | **Yes** — data ACL (FR-03) |
-| Keycloak group → `group:{name}` in JWT | **Yes** — via group membership mapper |
-| Custom JWT claim `collection_roles: { "payments-api": ["admin"] }` | **Optional** — E-39; query maps to extra permissions for scoped admin tools |
-
-Collection-scoped RBAC does **not** replace ACL — it narrows which admin diagnostics a user may run against which `collection_id` argument.
+OTel: `mcp.authz.check` with `authz.method=mcp_token|jwt`, `authz.token_id`.
 
 ---
 
@@ -2286,7 +2279,7 @@ When query `[sessions].enabled = true`, BFF **SHOULD** map `thread_id` ↔ `sess
 | hybrid-rag-ingest | `/admin/ingest/*` | Service account; no public internet |
 | hybrid-rag-infra | TLS, network, identity | Caddy edge, Keycloak realm, internal store network |
 | observability sub-project | Dashboards | SSO; no PII in traces |
-| mod-chat | BFF | Keycloak OIDC (`infra/`); forwards JWT to query |
+| mod-chat | BFF | Keycloak OIDC; mints/forwards `rag_mcp_*` to query |
 
 ACL enforcement at **query** (read) and **ingest** (write `acl_principal` on chunks): see §9.4. **RBAC** gates tool access at MCP boundary (§7.13).
 
@@ -2296,15 +2289,23 @@ ACL enforcement at **query** (read) and **ingest** (write `acl_principal` on chu
 
 #### 9.4.1 Principal resolution
 
-From validated JWT (or dev stub):
+From **MCP access token** (primary):
+
+```text
+tenant_id  ← token row
+principal  ← token row (e.g. user:alice)
+permissions ← token row (RBAC)
+principals_for_acl = { principal } ∪ { group:* from ACL grants matching user }
+```
+
+From **JWT bridge** (optional):
 
 ```text
 principals = { user:{sub} }
            ∪ { group:{role} for role in realm_access.roles }
-           ∪ { group:{group} for group in groups claim }   # optional Keycloak groups mapper
+           ∪ { group:{group} for group in groups claim }
+permissions ← map roles via [rbac.role_templates] at request time
 ```
-
-Service account tokens add `service:{azp}` where `azp` is authorized party client id.
 
 #### 9.4.2 ACL evaluation (data plane)
 
@@ -3265,7 +3266,7 @@ curl -N -X POST http://127.0.0.1:8010/research/stream \
 | OD6 | Monolith vs split deploy | **Split by default in prod** | `hybrid-rag-query` and `hybrid-rag-ingest` separate images; compose for dev |
 | OD7 | Event bus for cache invalidation | **Redis Streams `rag:events`** | Loose coupling ingest → query; optional webhook adapter |
 | OD8 | Observability split | **Langfuse (LLM) + OTel/Jaeger (distributed)** in `observability/` | Single sub-project compose; SDK-only in apps |
-| OD9 | MCP auth model | **OIDC JWT in query + optional Caddy bearer** | User-level ACL requires JWT `sub`; static bearer is edge-only |
+| OD9 | MCP auth model | **MCP access token (`rag_mcp_*`) + optional JWT bridge** | Token carries RBAC; fits MCP hosts |
 | OD10 | Identity hosting | **Keycloak in `hybrid-rag-infra`** | Same Postgres host, separate DB; realm import for dev |
 | OD11 | Image releases | **Packer per sub-project + compatibility matrix** | Independent version trains with contract gates |
 

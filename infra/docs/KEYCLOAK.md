@@ -52,12 +52,12 @@ Map to MCP permissions via `query.toml` `[rbac.role_permissions]` — platform �
 | `collection-admin` | + admin.collections, admin.diagnostics | Team lead |
 | `admin` | `mcp.*` (all tools) | Platform ops |
 
-Map **data access** to collection ACL in catalog (`acl_grants`) using principals:
+Map **tool access** to **MCP access tokens** (mint per user with `role_template`). Map **data access** to `acl_grants`:
 
 - `user:{sub}` — individual
-- `group:{realm_role}` or `group:{keycloak_group}` — team access
+- `group:{team}` — team access via Keycloak group + catalog grant
 
-Example: assign user to Keycloak group `payments-team`, grant `group:payments-team` read on `payments-api` collection.
+Example: mint `user` token for Alice; grant `group:payments-team` read on `payments-api` collection.
 
 ---
 

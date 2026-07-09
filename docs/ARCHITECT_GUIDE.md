@@ -155,15 +155,15 @@ sequenceDiagram
     Browser->>KC: OIDC PKCE login
     KC-->>Browser: JWT
     Browser->>BFF: Session + JWT
-    BFF->>Query: Bearer JWT + traceparent + tenant_id
-    Query->>Query: Validate JWT + ACL + rate limits
+    BFF->>Query: Bearer rag_mcp_* + traceparent
+    Query->>Query: Validate token + RBAC + ACL + rate limits
 ```
 
 | Layer | Control |
 |-------|---------|
 | Edge | TLS, optional static bearer on MCP SSE (dev/S2S only) |
-| Application | OIDC JWT when `auth.required=true` |
-| Data | Tenant filter + ACL empty-set semantics |
+| Application | **MCP access token** (`rag_mcp_*`) or JWT bridge |
+| Data | Tenant + principal from token row; ACL empty-set semantics |
 | Audit | Structured logs; Langfuse sessions |
 
 ---
