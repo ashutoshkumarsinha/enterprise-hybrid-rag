@@ -72,3 +72,16 @@ def set_cached_answer(state: dict[str, Any], payload: dict[str, Any]) -> None:
 
 def clear_memory_cache() -> None:
     _CACHE.clear()
+
+
+def redis_healthcheck() -> bool:
+    """Ping Redis when configured; stub mode counts as healthy."""
+    if _stub_mode():
+        return True
+    try:
+        import redis
+
+        client = redis.from_url(os.environ["REDIS_URL"], decode_responses=True)
+        return bool(client.ping())
+    except Exception:
+        return False

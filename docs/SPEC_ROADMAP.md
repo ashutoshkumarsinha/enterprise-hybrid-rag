@@ -112,7 +112,7 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | E-25 | Embedding dimension migration playbook | resolves OQ2 |
 | E-26 | Chaos test suite automation | spec §13.1 monthly staging |
 | E-27 | Tenant quota admin API | `PUT /admin/tenants/{id}/quotas` |
-| E-28 | Circuit breaker implementation | query `client_factory.py` |
+| E-28 | Circuit breaker implementation | query `client_factory.py` | **Done v0.31** |
 | E-29 | Load test harness (`load_test.py`) | k6/locust wrapper |
 
 ### P3 — Advanced product
@@ -166,7 +166,7 @@ Before tagging `rag-v1.x`, verify:
 - [ ] Ragas gates pass on golden set (`benchmark_rag.py --ragas`)
 - [ ] k6 or Locust soak passes NFR-23 (`load_test.py`)
 - [ ] Rate limits + quotas configured for prod tenants
-- [ ] Circuit breakers enabled on query inference clients
+- [x] Circuit breakers enabled on query inference clients (E-28)
 - [ ] OTel SDK overhead < 5% p95 vs disabled (`OBS-P3`)
 - [ ] Infra store SLOs pass (`make health` in infra)
 

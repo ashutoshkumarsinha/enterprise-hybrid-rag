@@ -19,14 +19,14 @@ from typing import Literal
 from langgraph.graph import END, StateGraph
 
 from app.client_factory import (
-    get_chat_client,
-    get_embed_client,
-    get_neo4j_client,
-    get_qdrant_client,
+    CircuitOpenError,
+    complete_answer,
+    embed_query,
+    enrich_graph_blocks,
     get_reranker_client,
+    rerank_chunks,
+    retrieve_chunks,
 )
-from app.clients.qdrant import retrieve_for_state
-from app.graph_enrich import enrich_context_blocks
 from app.langsmith_config import setup_langsmith
 from app.query_cache import get_cached_answer, set_cached_answer
 from app.rag_answer import answer_updates
@@ -83,10 +83,15 @@ def node_embed(state: RAGState) -> dict:
     Writes: ``query_dense_vector``, ``query_sparse_vector``, ``timings_ms.embed``.
     """
     start = time.perf_counter()
-    embed = get_embed_client()
     query = state.get("query", "")
-    dense = embed.embed(query)
-    sparse = embed.sparse_from_text(query)
+    try:
+        dense, sparse = embed_query(query)
+    except CircuitOpenError:
+        return {
+            **_tick(state, "embed", start),
+            "abstained": True,
+            "degradation_level": "L3",
+        }
     return {
         **_tick(state, "embed", start),
         "query_dense_vector": dense,
@@ -114,7 +119,17 @@ def node_retrieve(state: RAGState) -> dict:
     Writes: ``retrieved_chunks``, ``timings_ms.retrieve``.
     """
     start = time.perf_counter()
-    chunks = retrieve_for_state(state, get_embed_client(), get_qdrant_client())
+    if state.get("abstained"):
+        return _tick(state, "retrieve", start)
+    try:
+        chunks = retrieve_chunks(state)
+    except CircuitOpenError:
+        return {
+            **_tick(state, "retrieve", start),
+            "abstained": True,
+            "degradation_level": "L4",
+            "retrieved_chunks": [],
+        }
     return {**_tick(state, "retrieve", start), "retrieved_chunks": chunks}
 
 
@@ -130,17 +145,26 @@ def node_rerank(state: RAGState) -> dict:
     start = time.perf_counter()
     chunks = state.get("retrieved_chunks") or []
     query = state.get("query", "")
-    reranker = get_reranker_client()
-    ranked, scores = reranker.rerank(query, chunks)
+    degradation_level = state.get("degradation_level")
+    try:
+        ranked, scores = rerank_chunks(query, chunks)
+    except CircuitOpenError:
+        top_k = get_reranker_client().top_k
+        ranked = sorted(chunks, key=lambda c: float(c.get("score", 0.0)), reverse=True)[:top_k]
+        scores = [float(c.get("score", 0.0)) for c in ranked]
+        degradation_level = degradation_level or "L2"
     min_score = float(os.environ.get("MIN_RERANK_SCORE", "0.0"))
     top_score = scores[0] if scores else 0.0
     abstained = top_score < min_score if scores else True
-    return {
+    updates = {
         **_tick(state, "rerank", start),
         "retrieved_chunks": ranked,
         "rerank_scores": scores,
         "abstained": abstained,
     }
+    if degradation_level:
+        updates["degradation_level"] = degradation_level
+    return updates
 
 
 def node_graph_enrich(state: RAGState) -> dict:
@@ -154,7 +178,14 @@ def node_graph_enrich(state: RAGState) -> dict:
     start = time.perf_counter()
     if not state.get("graph_enrich_enabled", True) or state.get("abstained"):
         return _tick(state, "graph", start)
-    blocks = enrich_context_blocks(state, get_neo4j_client())
+    try:
+        blocks = enrich_graph_blocks(state)
+    except CircuitOpenError:
+        return {
+            **_tick(state, "graph", start),
+            "graph_enrich_enabled": False,
+            "degradation_level": state.get("degradation_level") or "L1",
+        }
     return {**_tick(state, "graph", start), "context_blocks": blocks}
 
 
@@ -169,13 +200,25 @@ def node_answer(state: RAGState) -> dict:
     if state.get("from_cache"):
         return {}
     if state.get("abstained"):
+        if state.get("degradation_level") in ("L3", "L4"):
+            return answer_updates(
+                state,
+                "Temporarily unable to search. Please try again shortly.",
+                stub=True,
+            )
         return answer_updates(
             state,
             "I could not find enough relevant content to answer confidently.",
             stub=True,
         )
-    chat = get_chat_client()
-    text, is_stub = chat.complete(state)
+    try:
+        text, is_stub = complete_answer(state)
+    except CircuitOpenError:
+        return answer_updates(
+            state,
+            "Temporarily unable to search. Please try again shortly.",
+            stub=True,
+        )
     updates = answer_updates(state, text, stub=is_stub)
     if not state.get("from_cache"):
         set_cached_answer(

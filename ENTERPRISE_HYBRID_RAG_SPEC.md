@@ -156,7 +156,7 @@ flowchart LR
 
 | Sub-project | Docs | Compose / ops | Application code | Tests / schemas |
 |-------------|------|---------------|------------------|-----------------|
-| **query** | **Complete** — `SPEC.md`, 9× `docs/` (incl. RBAC, SESSIONS, TOKEN_ADMIN, MCP stdio) | `compose/`, `Makefile`, `Dockerfile` | **Partial** — auth, MCP HTTP + stdio, LangGraph clients, catalog tools; circuit breakers pending | **48 contract/unit tests**; `benchmark_rag.py` implemented |
+| **query** | **Complete** — `SPEC.md`, 9× `docs/` (incl. RBAC, SESSIONS, TOKEN_ADMIN, MCP stdio) | `compose/`, `Makefile`, `Dockerfile` | **Partial** — full query path wired; supervisor LLM stub | **56 contract/unit tests**; `benchmark_rag.py` implemented |
 | **ingest** | **Complete** — `SPEC.md`, 7× `docs/` (incl. MIGRATIONS) | `compose/`, worker `Dockerfile` | **Partial** — orchestrator stub; `migrate.py` implemented | **Migrations 001–004** on disk; no `tests/` yet |
 | **infra** | **Complete** — `SPEC.md`, 9× `docs/` | Full store compose; Qdrant gRPC **6334** | **Partial** — `init-db.sh`, `init-minio.sh`, `postgres-init.sh` (4 catalog roles), `healthcheck.sh`, `backup.sh`, `render_caddyfile.py`, `hybrid-rag-realm.json` | No `postgres-catalog-indexes.sql` (INF-P2) |
 | **inference** | **Complete** — `SPEC.md`, 7× `docs/` | vLLM `v0.6.6` compose profiles | **Partial** — `reranker/sidecar.py` working minimal `/predict`; vLLM upstream images | Smoke scripts only |
@@ -185,7 +185,8 @@ flowchart LR
 |----------|---------------------|
 | `ingest/tests/` | `docs/TESTING.md`, FR-33/34 |
 | Catalog MCP tools (`list_indexed_documents`, etc.) | **Done v0.30** — `catalog_store.py`, ACL §9.4.2 |
-| `query/app/client_factory.py` circuit breakers | E-28 |
+| `query/app/circuit_breaker.py` | Implemented | FR-28 breakers + §6.3.2 degrade ladder |
+| `query/app/client_factory.py` | Implemented | Guarded client calls + breaker registry |
 | `benchmark_ingest.py`, `load_test.py` | §13.1 |
 | `chat-ui/`, `deploy/helm/` | E-18, E-19 |
 

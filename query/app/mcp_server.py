@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.models import AuthContext
 from app.deps import get_auth_context
@@ -53,9 +53,10 @@ setup_langsmith()
 
 
 @app.get("/healthz")
-def healthz() -> dict:
+def healthz():
     settings = get_settings()
     from app.client_factory import (
+        breaker_snapshots,
         get_chat_client,
         get_embed_client,
         get_neo4j_client,
@@ -63,6 +64,7 @@ def healthz() -> dict:
         get_reranker_client,
     )
     from app.catalog_store import create_catalog_store
+    from app.query_cache import redis_healthcheck
 
     qdrant_ok = get_qdrant_client().healthcheck()
     embed_ok = get_embed_client().healthcheck()
@@ -70,10 +72,15 @@ def healthz() -> dict:
     reranker_ok = get_reranker_client().healthcheck()
     neo4j_ok = True if settings.stub_health else get_neo4j_client().healthcheck()
     catalog_ok = True if settings.stub_health else create_catalog_store(settings).healthcheck()
-    stores_ready = qdrant_ok and embed_ok and chat_ok and reranker_ok
-    research_ready = stores_ready if not settings.stub_health else True
+    redis_ok = True if settings.stub_health else redis_healthcheck()
+    if settings.stub_health:
+        stores_ready = True
+        research_ready = True
+    else:
+        stores_ready = qdrant_ok and embed_ok and chat_ok and reranker_ok and catalog_ok
+        research_ready = stores_ready
     status = "ok" if research_ready else "degraded"
-    return {
+    body = {
         "status": status,
         "module": "hybrid-rag-query",
         "research_ready": research_ready,
@@ -82,13 +89,17 @@ def healthz() -> dict:
         "langsmith_tracing": os.environ.get("LANGCHAIN_TRACING_V2", "false"),
         "checks": {
             "qdrant_ok": qdrant_ok,
-            "neo4j_ok": neo4j_ok if not settings.stub_health else True,
-            "redis_ok": settings.stub_health,
+            "neo4j_ok": neo4j_ok,
+            "redis_ok": redis_ok,
             "inference_ok": embed_ok and chat_ok,
-            "catalog_ok": catalog_ok if not settings.stub_health else True,
+            "catalog_ok": catalog_ok,
             "reranker_ok": reranker_ok,
         },
+        "circuit_breakers": breaker_snapshots(),
     }
+    if not research_ready:
+        return JSONResponse(status_code=503, content=body)
+    return body
 
 
 @app.get("/sse")

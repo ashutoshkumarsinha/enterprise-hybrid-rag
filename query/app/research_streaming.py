@@ -7,7 +7,8 @@ import time
 from collections.abc import AsyncIterator
 from typing import Any
 
-from app.client_factory import get_chat_client
+from app.client_factory import get_breakers, get_chat_client
+from app.circuit_breaker import breakers_enabled
 from app.models import AuthContext
 from app.mcp_format import format_research_markdown
 from app.query_cache import set_cached_answer
@@ -98,26 +99,57 @@ async def stream_research_events(
             yield event
     else:
         chat = get_chat_client()
-        parts: list[str] = []
-        stream_start = time.perf_counter()
-        async for token in chat.stream_tokens(preflight):
-            parts.append(token)
-            yield f"data: {json.dumps({'type': 'token', 'text': token})}\n\n"
-        timings = dict(preflight.get("timings_ms") or {})
-        timings["answer"] = int((time.perf_counter() - stream_start) * 1000)
-        preflight = _merge_state(preflight, {"timings_ms": timings})
-        final = _merge_state(
-            preflight,
-            answer_updates(preflight, "".join(parts), stub=chat.is_stub),
-        )
-        set_cached_answer(
-            state,
-            {
-                "answer_text": final.get("answer_text", ""),
-                "sources": final.get("sources", []),
-                "stub": final.get("stub", chat.is_stub),
-            },
-        )
+        breaker = get_breakers()["chat"]
+        if breakers_enabled() and not breaker.allow_request():
+            final = _merge_state(
+                preflight,
+                answer_updates(
+                    preflight,
+                    "Temporarily unable to search. Please try again shortly.",
+                    stub=True,
+                ),
+            )
+            async for event in _yield_answer_tokens(final.get("answer_text", "")):
+                yield event
+        else:
+            parts: list[str] = []
+            stream_start = time.perf_counter()
+            try:
+                async for token in chat.stream_tokens(preflight):
+                    parts.append(token)
+                    yield f"data: {json.dumps({'type': 'token', 'text': token})}\n\n"
+                if breakers_enabled():
+                    breaker.record_success()
+            except Exception:
+                if breakers_enabled():
+                    breaker.record_failure()
+                final = _merge_state(
+                    preflight,
+                    answer_updates(
+                        preflight,
+                        "Temporarily unable to search. Please try again shortly.",
+                        stub=True,
+                    ),
+                )
+                async for event in _yield_answer_tokens(final.get("answer_text", "")):
+                    yield event
+                parts = [final.get("answer_text", "")]
+            else:
+                timings = dict(preflight.get("timings_ms") or {})
+                timings["answer"] = int((time.perf_counter() - stream_start) * 1000)
+                preflight = _merge_state(preflight, {"timings_ms": timings})
+                final = _merge_state(
+                    preflight,
+                    answer_updates(preflight, "".join(parts), stub=chat.is_stub),
+                )
+                set_cached_answer(
+                    state,
+                    {
+                        "answer_text": final.get("answer_text", ""),
+                        "sources": final.get("sources", []),
+                        "stub": final.get("stub", chat.is_stub),
+                    },
+                )
 
     sources = final.get("sources") or []
     sources_md = "\n".join(
