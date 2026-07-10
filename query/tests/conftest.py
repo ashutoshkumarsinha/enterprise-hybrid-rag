@@ -10,6 +10,13 @@ from app.session_store import InMemorySessionStore
 from app.token_store import InMemoryTokenStore
 
 
+def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line(
+        "markers",
+        "integration: live stack tests (requires LIVE_STACK=1)",
+    )
+
+
 @pytest.fixture()
 def client() -> TestClient:
     app.state.token_store = InMemoryTokenStore()

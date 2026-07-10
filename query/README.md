@@ -45,6 +45,18 @@ cd ../infra && make up PROFILE=edge
 # https://localhost:8080/mcp/sse → query:8010
 ```
 
+### Live integration tests (nightly)
+
+```bash
+cp .env.live.example .env   # merge with local secrets/ports; disable all *_STUB flags
+export LIVE_STACK=1 LIVE_STACK_STRICT=1
+make integration
+# Optional: probe a running query container
+export QUERY_BASE_URL=http://127.0.0.1:8010
+```
+
+PR CI runs `pytest tests/unit tests/contract` only. See [../docs/TESTING.md](../docs/TESTING.md).
+
 ## Consumer contract
 
 - **Reads:** Qdrant, Neo4j, Postgres catalog (RO), Redis cache, MinIO presigned URLs

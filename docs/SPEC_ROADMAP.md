@@ -23,7 +23,8 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | **Catalog MCP tools** | **Done v0.30** | `catalog_store.py`, ACL filtering |
 | **benchmark_rag.py (LG-4)** | **Implemented** | `query/benchmarks/` |
 | **migrate.py (E-14)** | **Implemented** | `ingest/app/migrate.py` |
-| **Contract tests** | **34 tests passing** | `query/tests/contract/`, `query/tests/unit/` |
+| **Contract tests** | **62 tests passing** | `query/tests/contract/`, `query/tests/unit/` |
+| **Integration tests** | **Implemented** | `query/tests/integration/` (`LIVE_STACK=1`, `.env.live.example`) |
 | **SigNoz APM profile** | **Partial on disk** | §10.5, `observability/docs/SIGNOZ.md` |
 | **Postgres query roles** | **Init script + grants** | `postgres-init.sh`, `004_*`, `infra/docs/POSTGRES.md` |
 | **Root `.gitignore`** | **Done** | secrets, local configs, token files |

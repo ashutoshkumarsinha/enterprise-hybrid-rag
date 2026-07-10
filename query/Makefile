@@ -4,7 +4,7 @@ REGISTRY ?=
 PUSH     ?= false
 PACKER_ARGS := -var "image_tag=$(IMAGE_TAG)" -var "registry=$(REGISTRY)" -var "push=$(PUSH)"
 
-.PHONY: network up down health logs build lint format packer-init packer-validate packer-build
+.PHONY: network up down health logs build lint format integration packer-init packer-validate packer-build
 
 network:
 	docker network inspect hybrid-rag-net >/dev/null 2>&1 || docker network create hybrid-rag-net
@@ -33,6 +33,9 @@ format:
 
 benchmark: ## Run golden-set benchmark (stub mode default)
 	@python benchmarks/benchmark_rag.py --limit 4 --golden-set benchmarks/golden_set.json.example
+
+integration: ## Live-stack integration tests (set LIVE_STACK=1; see .env.live.example)
+	@LIVE_STACK=$${LIVE_STACK:-1} pytest tests/integration -q
 
 packer-init:
 	packer init packer/

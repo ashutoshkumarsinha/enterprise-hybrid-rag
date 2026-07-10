@@ -5,13 +5,23 @@ from __future__ import annotations
 import json
 import os
 
+import pytest
+
 from app.clients.chat import ChatClient
+from app.settings import get_settings
 from app.supervisor import (
     build_supervisor_messages,
     parse_supervisor_response,
     stub_supervise,
     supervise_query,
 )
+
+
+@pytest.fixture(autouse=True)
+def _clear_settings_cache() -> None:
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 def test_parse_supervisor_json() -> None:
