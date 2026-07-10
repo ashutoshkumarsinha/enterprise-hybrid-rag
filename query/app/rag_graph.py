@@ -4,8 +4,8 @@ This module compiles the query-plane StateGraph described in
 ENTERPRISE_HYBRID_RAG_SPEC.md §6.1. Each ``node_*`` function is one stage;
 conditional edges handle cache hits and abstention without a separate router node.
 
-Current status: **stub nodes** return placeholder data until store and inference
-clients are wired (see docs/DEVELOPER_GUIDE.md §4).
+Current status: **embed + Qdrant retrieve wired** via ``app/clients/``; answer/LLM and
+reranker HTTP remain stub until LG-2/LG-3.
 
 Spec: §6.1 stage graph · FR-08 abstention · FR-09 timings_ms · FR-13 single embed.
 """
@@ -18,6 +18,8 @@ from typing import Literal
 
 from langgraph.graph import END, StateGraph
 
+from app.client_factory import get_embed_client, get_qdrant_client
+from app.clients.qdrant import retrieve_for_state
 from app.langsmith_config import setup_langsmith
 from app.rag_state import RAGState
 
@@ -75,12 +77,18 @@ def node_embed(state: RAGState) -> dict:
     """Embed the query once for dense + sparse retrieval (FR-13).
 
     Reads: ``query``.
-    Writes: ``timings_ms.embed``; production also stores dense/sparse vectors on state.
-
-    Stub: no HTTP call yet — wire to inference OpenAI-compatible ``/v1/embeddings``.
+    Writes: ``query_dense_vector``, ``query_sparse_vector``, ``timings_ms.embed``.
     """
     start = time.perf_counter()
-    return _tick(state, "embed", start)
+    embed = get_embed_client()
+    query = state.get("query", "")
+    dense = embed.embed(query)
+    sparse = embed.sparse_from_text(query)
+    return {
+        **_tick(state, "embed", start),
+        "query_dense_vector": dense,
+        "query_sparse_vector": sparse,
+    }
 
 
 def node_scope(state: RAGState) -> dict:
@@ -99,20 +107,11 @@ def node_scope(state: RAGState) -> dict:
 def node_retrieve(state: RAGState) -> dict:
     """Hybrid dense + sparse retrieval from Qdrant with tenant filter (FR-02).
 
-    Reads: ``tenant_id``, ``collection_id``, embed vectors (when wired).
+    Reads: ``tenant_id``, ``collection_id``, embed vectors.
     Writes: ``retrieved_chunks``, ``timings_ms.retrieve``.
-
-    Stub: returns one fake chunk until ``clients/qdrant.py`` is implemented.
     """
     start = time.perf_counter()
-    chunks = [
-        {
-            "document_id": state.get("document_id") or "stub-doc",
-            "collection_id": state.get("collection_id", ""),
-            "section_title": "Stub section",
-            "text": "Stub retrieved chunk for development.",
-        }
-    ]
+    chunks = retrieve_for_state(state, get_embed_client(), get_qdrant_client())
     return {**_tick(state, "retrieve", start), "retrieved_chunks": chunks}
 
 
@@ -126,7 +125,8 @@ def node_rerank(state: RAGState) -> dict:
     Threshold: env ``MIN_RERANK_SCORE`` (production uses query.toml).
     """
     start = time.perf_counter()
-    scores = [0.85]
+    chunks = state.get("retrieved_chunks") or []
+    scores = [float(c.get("score", 0.85)) for c in chunks] or [0.0]
     min_score = float(os.environ.get("MIN_RERANK_SCORE", "0.0"))
     abstained = scores[0] < min_score if scores else True
     return {
@@ -171,13 +171,26 @@ def node_answer(state: RAGState) -> dict:
             "stub": True,
         }
     query = state.get("query", "")
+    qdrant = get_qdrant_client()
+    embed = get_embed_client()
+    using_stub = qdrant.is_stub or embed.is_stub
     text = f"Stub grounded answer for: {query[:200]}"
-    sources = state.get("retrieved_chunks") or []
+    sources = []
+    for chunk in state.get("retrieved_chunks") or []:
+        sources.append(
+            {
+                "label": chunk.get("label")
+                or f"{chunk.get('collection_id', '')} / {chunk.get('document_id', '')}",
+                "document_id": chunk.get("document_id"),
+                "collection_id": chunk.get("collection_id"),
+                "score": chunk.get("score"),
+            }
+        )
     return {
         **_tick(state, "answer", start),
         "answer_text": text,
         "sources": sources,
-        "stub": True,
+        "stub": using_stub,
     }
 
 

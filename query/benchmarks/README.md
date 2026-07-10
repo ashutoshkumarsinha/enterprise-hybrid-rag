@@ -124,9 +124,9 @@ query/benchmarks/
 ├── requirements.txt          # ragas, locust, datasets
 ├── baselines.json.example
 ├── golden_set.json.example   # Ragas + scope accuracy
-├── benchmark_rag.py          # (implement)
+├── benchmark_rag.py          # golden-set latency + optional --ragas
 ├── benchmark_ingest.py       # (implement)
-├── compare_benchmark_run.py  # (implement)
+├── compare_benchmark_run.py  # regression vs baselines.json
 ├── load_test.py              # k6 / Locust wrapper
 ├── k6/
 │   └── research_stream.js

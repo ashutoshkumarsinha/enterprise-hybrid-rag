@@ -29,6 +29,8 @@ class RAGState(TypedDict, total=False):
         langfuse_session_id / langfuse_trace_id: Observability hooks (IF-5).
         session_id: Conversation UUID for multi-turn history (§7.11).
         conversation_history: Prior user/assistant turns loaded from Postgres.
+        query_dense_vector: Dense embed from inference (FR-13).
+        query_sparse_vector: Sparse token indices/values for bm25-text.
 
     Pipeline outputs — produced by retrieve / rerank / answer nodes:
         scope_source: ``explicit`` or ``inferred`` after scope resolution.
@@ -61,6 +63,8 @@ class RAGState(TypedDict, total=False):
     langfuse_trace_id: str | None
     session_id: str | None
     conversation_history: list[dict[str, str]]
+    query_dense_vector: list[float]
+    query_sparse_vector: dict[str, list]
 
     # Pipeline outputs
     scope_source: str

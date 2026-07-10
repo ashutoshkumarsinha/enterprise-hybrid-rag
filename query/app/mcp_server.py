@@ -48,27 +48,27 @@ setup_langsmith()
 @app.get("/healthz")
 def healthz() -> dict:
     settings = get_settings()
-    if settings.stub_health:
-        return {
-            "status": "ok",
-            "module": "hybrid-rag-query",
-            "research_ready": True,
-            "stores_ready": True,
-            "pipeline": "langgraph",
-            "langsmith_tracing": os.environ.get("LANGCHAIN_TRACING_V2", "false"),
-            "checks": {
-                "qdrant_ok": True,
-                "neo4j_ok": True,
-                "redis_ok": True,
-                "inference_ok": True,
-                "catalog_ok": True,
-            },
-        }
+    from app.client_factory import get_embed_client, get_qdrant_client
+
+    qdrant_ok = get_qdrant_client().healthcheck()
+    embed_ok = get_embed_client().healthcheck()
+    stores_ready = qdrant_ok and embed_ok
+    research_ready = stores_ready if not settings.stub_health else True
+    status = "ok" if research_ready else "degraded"
     return {
-        "status": "degraded",
+        "status": status,
         "module": "hybrid-rag-query",
-        "research_ready": False,
-        "message": "STUB_HEALTH=false — implement live dependency probes (FR-06)",
+        "research_ready": research_ready,
+        "stores_ready": stores_ready,
+        "pipeline": "langgraph",
+        "langsmith_tracing": os.environ.get("LANGCHAIN_TRACING_V2", "false"),
+        "checks": {
+            "qdrant_ok": qdrant_ok,
+            "neo4j_ok": settings.stub_health,
+            "redis_ok": settings.stub_health,
+            "inference_ok": embed_ok,
+            "catalog_ok": settings.stub_health,
+        },
     }
 
 

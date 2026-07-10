@@ -31,6 +31,9 @@ lint:
 format:
 	@$(MAKE) -C .. format
 
+benchmark: ## Run golden-set benchmark (stub mode default)
+	@python benchmarks/benchmark_rag.py --limit 4 --golden-set benchmarks/golden_set.json.example
+
 packer-init:
 	packer init packer/
 

@@ -1,0 +1,45 @@
+{
+  "run_at": "2026-07-10T06:00:39.314830+00:00",
+  "count": 1,
+  "stages_ms": {
+    "cache_hit": {
+      "p50": 0,
+      "p95": 0
+    },
+    "supervisor": {
+      "p50": 0,
+      "p95": 0
+    },
+    "embed": {
+      "p50": 0,
+      "p95": 0
+    },
+    "scope": {
+      "p50": 0,
+      "p95": 0
+    },
+    "retrieve": {
+      "p50": 0,
+      "p95": 0
+    },
+    "rerank": {
+      "p50": 0,
+      "p95": 0
+    },
+    "graph": {
+      "p50": 0,
+      "p95": 0
+    },
+    "answer": {
+      "p50": 0,
+      "p95": 0
+    },
+    "total": {
+      "p50": 0,
+      "p95": 0
+    }
+  },
+  "scope_accuracy": 0.0,
+  "abstain_rate": 0.0,
+  "golden_set": "/Users/deeproot/idx/enterprise-hybrid-rag/query/benchmarks/golden_set.json.example"
+}
