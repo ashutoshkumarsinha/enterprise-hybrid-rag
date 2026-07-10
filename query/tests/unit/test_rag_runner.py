@@ -13,6 +13,7 @@ def test_advance_to_answer_populates_chunks() -> None:
     os.environ["QDRANT_STUB"] = "true"
     os.environ["EMBED_STUB"] = "true"
     os.environ["RERANKER_STUB"] = "true"
+    os.environ["NEO4J_STUB"] = "true"
     reset_clients()
     state = RAGState(
         query="test query",
@@ -27,4 +28,6 @@ def test_advance_to_answer_populates_chunks() -> None:
     )
     result = advance_to_answer(state)
     assert result.get("retrieved_chunks")
-    assert result.get("context_blocks") is not None or not result.get("abstained")
+    blocks = result.get("context_blocks") or []
+    assert blocks
+    assert "*Lineage:*" in blocks[0]

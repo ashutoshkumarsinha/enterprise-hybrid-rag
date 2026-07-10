@@ -145,7 +145,7 @@ flowchart LR
 
     subgraph stub["Stub / missing"]
         INGEST[ingest parsers + admin API]
-        GRAPH[Neo4j graph_enrich + catalog tools]
+        GRAPH[catalog tools + circuit breakers]
         PROD[prod health gates + circuit breakers]
     end
 
@@ -167,7 +167,9 @@ flowchart LR
 
 | Path | Status | Notes |
 |------|--------|-------|
-| `query/app/rag_graph.py` | **Partial** | Real embed/retrieve/rerank/answer/cache; graph + supervisor stub |
+| `query/app/clients/neo4j.py` | Implemented | Graph enrich read client + `NEO4J_STUB` |
+| `query/app/graph_enrich.py` | Implemented | §6.13.2 context block formatting |
+| `query/app/rag_graph.py` | **Partial** | Real embed/retrieve/rerank/graph/answer/cache; supervisor stub |
 | `query/app/mcp_server.py` | Implemented | `/healthz`, `/sse`, MCP tools, sessions, token admin |
 | `query/app/mcp_stdio.py` | Implemented | stdio MCP transport (`python -m app.mcp_stdio`) |
 | `query/app/jwt_auth.py` | Implemented | JWKS validation + `JWT_STUB` dev mode |
@@ -180,7 +182,6 @@ flowchart LR
 | Artifact | Spec / doc reference |
 |----------|---------------------|
 | `ingest/tests/` | `docs/TESTING.md`, FR-33/34 |
-| Neo4j `graph_enrich` client | §6.5, LG graph path |
 | Catalog MCP tools (`list_indexed_documents`, etc.) | §7.3 — stub responses only |
 | `query/app/client_factory.py` circuit breakers | E-28 |
 | `benchmark_ingest.py`, `load_test.py` | §13.1 |
@@ -3728,7 +3729,7 @@ Application code MUST explain **intent** and **contracts**, not restate syntax. 
 
 ## 22. Summary: what to spec next (v0.28 candidates)
 
-> **Shipped v0.23–v0.28:** SigNoz §10.5 (v0.23) · MCP sessions §7.11 (v0.24) · RBAC matrix (v0.25) · **token-based RBAC** §7.13 (v0.26) · roadmap hygiene (v0.27) · **auth + MCP handlers + LG-1–LG-4 + JWKS/stdio** (v0.28). **Next:** Neo4j graph enrich, catalog tools, circuit breakers, prod health gates toward **rag-v1.0**.
+> **Shipped v0.23–v0.29:** … **auth + MCP handlers + LG-1–LG-4 + JWKS/stdio** (v0.28) · **Neo4j graph enrich** (v0.29). **Next:** catalog MCP tools, circuit breakers, prod health gates toward **rag-v1.0**.
 
 Living detail: [docs/SPEC_ROADMAP.md](./docs/SPEC_ROADMAP.md). **On-disk status:** §1.4.
 

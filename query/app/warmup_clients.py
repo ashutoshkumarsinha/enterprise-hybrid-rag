@@ -7,6 +7,7 @@ import logging
 from app.client_factory import (
     get_chat_client,
     get_embed_client,
+    get_neo4j_client,
     get_qdrant_client,
     get_reranker_client,
 )
@@ -20,10 +21,12 @@ def warmup_clients() -> None:
     embed = get_embed_client()
     chat = get_chat_client()
     reranker = get_reranker_client()
+    neo4j = get_neo4j_client()
     logger.info(
-        "warmup_clients: qdrant=%s embed=%s chat=%s reranker=%s",
+        "warmup_clients: qdrant=%s embed=%s chat=%s reranker=%s neo4j=%s",
         qdrant.healthcheck(),
         embed.healthcheck(),
         chat.healthcheck(),
         reranker.healthcheck(),
+        neo4j.healthcheck(),
     )

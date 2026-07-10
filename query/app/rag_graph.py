@@ -4,8 +4,8 @@ This module compiles the query-plane StateGraph described in
 ENTERPRISE_HYBRID_RAG_SPEC.md §6.1. Each ``node_*`` function is one stage;
 conditional edges handle cache hits and abstention without a separate router node.
 
-Current status: **embed, Qdrant, reranker, chat, and query cache wired**; Neo4j graph
-enrich remains stub. Answer uses vLLM when ``CHAT_STUB=false``.
+Current status: **embed, Qdrant, reranker, chat, query cache, and Neo4j graph enrich wired**;
+supervisor LLM remains pass-through. Answer uses vLLM when ``CHAT_STUB=false``.
 
 Spec: §6.1 stage graph · FR-08 abstention · FR-09 timings_ms · FR-13 single embed.
 """
@@ -21,10 +21,12 @@ from langgraph.graph import END, StateGraph
 from app.client_factory import (
     get_chat_client,
     get_embed_client,
+    get_neo4j_client,
     get_qdrant_client,
     get_reranker_client,
 )
 from app.clients.qdrant import retrieve_for_state
+from app.graph_enrich import enrich_context_blocks
 from app.langsmith_config import setup_langsmith
 from app.query_cache import get_cached_answer, set_cached_answer
 from app.rag_answer import answer_updates
@@ -152,7 +154,7 @@ def node_graph_enrich(state: RAGState) -> dict:
     start = time.perf_counter()
     if not state.get("graph_enrich_enabled", True) or state.get("abstained"):
         return _tick(state, "graph", start)
-    blocks = [c.get("text", "") for c in state.get("retrieved_chunks") or []]
+    blocks = enrich_context_blocks(state, get_neo4j_client())
     return {**_tick(state, "graph", start), "context_blocks": blocks}
 
 
