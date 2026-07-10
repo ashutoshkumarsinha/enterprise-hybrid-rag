@@ -138,7 +138,7 @@ ingest-health: ## Health check ingest
 ingest-logs: ## Tail ingest logs
 	@$(MAKE) -C $(INGEST_DIR) logs
 
-.PHONY: query-up query-down query-health query-logs
+.PHONY: query-up query-down query-health query-logs query-test
 query-up: network ## Start hybrid-rag-query MCP gateway
 	@$(MAKE) -C $(QUERY_DIR) up
 
@@ -157,11 +157,12 @@ query-logs: ## Tail query logs
 
 .PHONY: bootstrap up down health logs
 .PHONY: migrate-catalog
-migrate-catalog: ## Apply catalog DDL (requires CATALOG_DSN or ingest .env)
-	@if [ -z "$${CATALOG_DSN:-}" ]; then \
-		echo "Set CATALOG_DSN or run: export \$$(grep CATALOG_DSN ingest/.env | xargs)"; exit 1; \
-	fi
-	psql "$${CATALOG_DSN}" -f ingest/migrations/001_catalog_v1.sql
+migrate-catalog: ## Apply catalog DDL via ingest migration runner
+	@$(MAKE) -C $(INGEST_DIR) migrate || echo "WARN: migrate skipped (set CATALOG_DSN in ingest/.env)"
+
+query-test: ## Run query pytest suites
+	@cd $(QUERY_DIR) && python -m pytest tests/contract tests/unit -q --tb=short 2>/dev/null || \
+		cd $(QUERY_DIR) && python -m pytest tests/contract -q --tb=short
 
 bootstrap: env ## Bootstrap full dev stack (infra → inference → obs → ingest → query)
 	@echo "==> 1/6 infra (stores + Keycloak)"

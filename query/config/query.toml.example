@@ -72,6 +72,8 @@ mcp_version = "1.0.0"
 qdrant_url = "http://qdrant:6333"
 neo4j_bolt_url = "bolt://neo4j:7687"
 catalog_dsn_ro = "postgresql://query_ro:***@postgres:5432/catalog"
+catalog_dsn_session = "postgresql://query_session_rw:***@postgres:5432/catalog"
+catalog_dsn_token = "postgresql://query_token_rw:***@postgres:5432/catalog"
 redis_url = "redis://redis:6379/0"
 vllm_url = "http://chat-llm:8000/v1"
 vllm_embed_url = "http://embedding:8001/v1"
@@ -99,9 +101,20 @@ deploy_env = "dev"
 
 [auth]
 required = false
+jwt_bridge = true
+mcp_token_prefix = "rag_mcp_"
+allow_token_bootstrap = true
+token_default_ttl_days = 90
 oidc_issuer = "http://keycloak:8080/realms/hybrid-rag"
 jwks_uri = "http://keycloak:8080/realms/hybrid-rag/protocol/openid-connect/certs"
 # Set required = true in production multi-tenant (FR-23, IF-6)
+
+[sessions]
+enabled = true
+max_history_turns = 10
+max_history_tokens = 2000
+max_per_principal = 100
+max_age_days = 90
 
 [rbac]
 enabled = true

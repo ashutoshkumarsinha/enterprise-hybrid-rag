@@ -5,7 +5,7 @@ REGISTRY ?=
 PUSH     ?= false
 PACKER_ARGS := -var "image_tag=$(IMAGE_TAG)" -var "registry=$(REGISTRY)" -var "push=$(PUSH)"
 
-.PHONY: network up down health logs build lint format packer-init packer-validate packer-build
+.PHONY: network up down health logs build lint format migrate migrate-status packer-init packer-validate packer-build
 
 network:
 	docker network inspect hybrid-rag-net >/dev/null 2>&1 || docker network create hybrid-rag-net
@@ -35,6 +35,12 @@ lint:
 
 format:
 	@$(MAKE) -C .. format
+
+migrate: ## Apply pending catalog migrations (requires CATALOG_DSN)
+	@python -m app.migrate
+
+migrate-status: ## Show applied/pending migrations
+	@python -m app.migrate --status
 
 packer-init:
 	packer init packer/
