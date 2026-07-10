@@ -1,9 +1,9 @@
 # Enterprise Hybrid RAG — Product Specification
 
-**Status:** Draft v0.27 (spec hygiene + normative gaps)  
+**Status:** Draft v0.28 (v0.28 implementation bundle)  
 **Audience:** Platform engineers, solution architects, security reviewers  
 **Scope:** Document-agnostic ingestion, hybrid retrieval, graph enrichment, MCP-first API, enterprise chat UI  
-**Changelog:** v0.27 — §22 roadmap sync, token admin OpenAPI (§7.13.10), migration runner (§4.4.4), Postgres query roles + `004_*` grants, remaining MCP JSON schemas; v0.26 — **token-based MCP RBAC** — `rag_mcp_*` Bearer tokens (§7.13), `mcp_access_tokens` DDL, FR-23/45/47–48; v0.25 — RBAC permission matrix; v0.24 — sessions §7.11; v0.23 — SigNoz §10.5; v0.22 — catalog DDL, IF-6
+**Changelog:** v0.28 — query auth (`auth.py`, `jwt_auth.py`, `token_store.py`, `session_store.py`), MCP HTTP + stdio handlers, LG-1–LG-4 clients/benchmarks, LG-2/LG-3 streaming + cache, contract tests; v0.27 — §22 roadmap sync, token admin OpenAPI (§7.13.10), migration runner (§4.4.4), Postgres query roles + `004_*` grants, remaining MCP JSON schemas; v0.26 — **token-based MCP RBAC** — `rag_mcp_*` Bearer tokens (§7.13), `mcp_access_tokens` DDL, FR-23/45/47–48; v0.25 — RBAC permission matrix; v0.24 — sessions §7.11; v0.23 — SigNoz §10.5; v0.22 — catalog DDL, IF-6
 
 > **Note:** This document is the **platform overview**. Module-specific normative specs live in [`modules/`](./modules/) and sub-project `SPEC.md` files. The **enhancement roadmap** is in [`docs/SPEC_ROADMAP.md`](./docs/SPEC_ROADMAP.md). **Performance tuning** is in [`docs/PERFORMANCE.md`](./docs/PERFORMANCE.md). **Testing & TDD** is in [`docs/TESTING.md`](./docs/TESTING.md). **Documentation standards** are in [`docs/DOCUMENTATION.md`](./docs/DOCUMENTATION.md). **Coding standards** are in [`docs/CODING_STANDARDS.md`](./docs/CODING_STANDARDS.md) §23. **What to spec next** is in §22. **What exists on disk today** is in §1.4.
 
@@ -124,7 +124,7 @@ Cross-language coupling remains **HTTP + shared contracts** (§3.3, §4) — nev
 
 ### 1.4 Implementation inventory (repository reality)
 
-> **Phase:** Specification-first monorepo with **compose scaffolds**, **catalog migrations 001–004**, **JSON schemas**, and **stub application code**. Normative docs are largely complete; **contract tests and production handlers are not yet implemented** (§22).
+> **Phase:** Specification-first monorepo with **compose scaffolds**, **catalog migrations 001–004**, **JSON schemas**, and **v0.28 query implementation** (auth, MCP tools, LangGraph clients). Ingest handlers and rag-v1.0 production gates remain partial (§22).
 
 ```mermaid
 flowchart LR
@@ -137,15 +137,16 @@ flowchart LR
     subgraph partial["Partial on disk"]
         INFRA[infra scripts init-db minio keycloak postgres roles]
         MIG[ingest/migrations/ 001–004]
-        SCHEMAS[modules/schemas/ 10 contracts]
-        BENCH[k6 Locust golden_set.example]
+        SCHEMAS[modules/schemas/ 11 contracts]
+        BENCH[benchmark_rag.py + k6 Locust golden_set]
         RERANK[inference reranker sidecar]
+        QUERY[query auth MCP clients cache]
     end
 
     subgraph stub["Stub / missing"]
-        TESTS[tests/ contract suites]
-        MCP[MCP tool handlers + token_store]
-        CLI[benchmark_rag.py migrate.py]
+        INGEST[ingest parsers + admin API]
+        GRAPH[Neo4j graph_enrich + catalog tools]
+        PROD[prod health gates + circuit breakers]
     end
 
     strong --> partial --> stub
@@ -155,38 +156,35 @@ flowchart LR
 
 | Sub-project | Docs | Compose / ops | Application code | Tests / schemas |
 |-------------|------|---------------|------------------|-----------------|
-| **query** | **Complete** — `SPEC.md`, 9× `docs/` (incl. RBAC, SESSIONS, TOKEN_ADMIN) | `compose/`, `Makefile`, `Dockerfile` | **Stub** — LangGraph topology yes; `mcp_server.py` HTTP only; no `auth.py`, `token_store.py`, `session_store.py` | **Schemas on disk** — `query/tests/` pending; `benchmark_rag.py` not implemented |
-| **ingest** | **Complete** — `SPEC.md`, 7× `docs/` (incl. MIGRATIONS) | `compose/`, worker `Dockerfile` | **Stub** — orchestrator `0.1.0-stub`, `tasks.batch_write` no-op; `migrate.py` pending | **Migrations 001–004** on disk; no `tests/` yet |
+| **query** | **Complete** — `SPEC.md`, 9× `docs/` (incl. RBAC, SESSIONS, TOKEN_ADMIN, MCP stdio) | `compose/`, `Makefile`, `Dockerfile` | **Partial** — auth, MCP HTTP + stdio, LangGraph clients (Qdrant/embed/chat/rerank/cache); Neo4j graph + catalog tools stub | **34 contract/unit tests**; `benchmark_rag.py` implemented |
+| **ingest** | **Complete** — `SPEC.md`, 7× `docs/` (incl. MIGRATIONS) | `compose/`, worker `Dockerfile` | **Partial** — orchestrator stub; `migrate.py` implemented | **Migrations 001–004** on disk; no `tests/` yet |
 | **infra** | **Complete** — `SPEC.md`, 9× `docs/` | Full store compose; Qdrant gRPC **6334** | **Partial** — `init-db.sh`, `init-minio.sh`, `postgres-init.sh` (4 catalog roles), `healthcheck.sh`, `backup.sh`, `render_caddyfile.py`, `hybrid-rag-realm.json` | No `postgres-catalog-indexes.sql` (INF-P2) |
 | **inference** | **Complete** — `SPEC.md`, 7× `docs/` | vLLM `v0.6.6` compose profiles | **Partial** — `reranker/sidecar.py` working minimal `/predict`; vLLM upstream images | Smoke scripts only |
 | **observability** | **Complete** — `SPEC.md`, 6× `docs/` + **§10.5 SigNoz** | Dev collector + Jaeger + Langfuse compose; `PROFILE=signoz` sidecar | **Partial** — SigNoz dashboard stubs, `otel-collector-config.signoz.yaml`, `signoz-rules.yaml` | No `otel-collector-config.prod.yaml` (OBS-P1) |
-| **mod-kernel** | **Normative** — `SHARED_CONTRACTS.md` | N/A (no runtime) | **10 JSON schemas** in `modules/schemas/` §4.7 | Contract test **names** in §14; test files pending |
+| **mod-kernel** | **Normative** — `SHARED_CONTRACTS.md` | N/A (no runtime) | **11 JSON schemas** in `modules/schemas/` §4.7 | Contract tests in `query/tests/contract/` |
 
 #### Key files on disk (reference)
 
 | Path | Status | Notes |
 |------|--------|-------|
-| `query/app/rag_graph.py` | Stub graph | All nodes placeholder; TL-13 docstrings |
-| `query/app/rag_state.py` | Implemented | TypedDict + `session_id`, `conversation_history` |
-| `query/app/mcp_server.py` | Partial | `/healthz`, `/sse`, `POST /research/stream`; optimistic health (§1.5) |
-| `query/docs/RBAC.md`, `SESSIONS.md`, `TOKEN_ADMIN.md` | Normative | Token RBAC + session + admin API |
-| `ingest/migrations/001`–`004_*.sql` | Present | Catalog, sessions, tokens, role grants |
-| `ingest/docs/MIGRATIONS.md` | Normative | Migration runner contract §4.4.4 |
-| `.gitignore` | Present | Secrets, local configs, token files |
-| `pyproject.toml`, `Makefile` (root) | Present | `make bootstrap`, `make health`, `make lint` |
-| `chat-ui/`, `deploy/helm/` | **Not present** | E-18, E-19 |
+| `query/app/rag_graph.py` | **Partial** | Real embed/retrieve/rerank/answer/cache; graph + supervisor stub |
+| `query/app/mcp_server.py` | Implemented | `/healthz`, `/sse`, MCP tools, sessions, token admin |
+| `query/app/mcp_stdio.py` | Implemented | stdio MCP transport (`python -m app.mcp_stdio`) |
+| `query/app/jwt_auth.py` | Implemented | JWKS validation + `JWT_STUB` dev mode |
+| `query/app/auth.py`, `token_store.py`, `session_store.py` | Implemented | MCP tokens + JWT bridge + tenant binding |
+| `query/benchmarks/benchmark_rag.py` | Implemented | §13.2.1 CLI |
+| `ingest/app/migrate.py` | Implemented | Migration runner §4.4.4 |
 
 #### Not yet on disk (normative refs exist)
 
 | Artifact | Spec / doc reference |
 |----------|---------------------|
-| `query/tests/`, `ingest/tests/` | `docs/TESTING.md`, FR-33/34 |
-| `query/benchmarks/benchmark_rag.py` | §13.2.1, LG-4 |
-| MCP `research_documents` tool handler | §7.3, G4 |
-| MCP session tools + `session_store.py` | §7.11, FR-41–43 |
-| `query/app/auth.py`, `rbac.py`, `token_store.py` | §7.13, FR-44–48 |
-| `ingest/app/migrate.py` | §4.4.4, `ingest/docs/MIGRATIONS.md` |
-| `query/app/warmup_clients()` | FR-14, `query/SPEC.md` |
+| `ingest/tests/` | `docs/TESTING.md`, FR-33/34 |
+| Neo4j `graph_enrich` client | §6.5, LG graph path |
+| Catalog MCP tools (`list_indexed_documents`, etc.) | §7.3 — stub responses only |
+| `query/app/client_factory.py` circuit breakers | E-28 |
+| `benchmark_ingest.py`, `load_test.py` | §13.1 |
+| `chat-ui/`, `deploy/helm/` | E-18, E-19 |
 
 ### 1.5 Stub-phase conventions (pre–rag-v1.0)
 
@@ -3730,7 +3728,7 @@ Application code MUST explain **intent** and **contracts**, not restate syntax. 
 
 ## 22. Summary: what to spec next (v0.28 candidates)
 
-> **Shipped v0.23–v0.27:** SigNoz §10.5 (v0.23) · MCP sessions §7.11 + `002_*` (v0.24) · RBAC matrix (v0.25) · **token-based RBAC** §7.13 + `003_*` (v0.26) · **roadmap hygiene**, token admin OpenAPI, migration runner, `004_*` grants, MCP schemas (v0.27). **Next:** implement `auth.py`, `token_store.py`, `session_store.py`, MCP tool handlers, contract tests toward **rag-v1.0**.
+> **Shipped v0.23–v0.28:** SigNoz §10.5 (v0.23) · MCP sessions §7.11 (v0.24) · RBAC matrix (v0.25) · **token-based RBAC** §7.13 (v0.26) · roadmap hygiene (v0.27) · **auth + MCP handlers + LG-1–LG-4 + JWKS/stdio** (v0.28). **Next:** Neo4j graph enrich, catalog tools, circuit breakers, prod health gates toward **rag-v1.0**.
 
 Living detail: [docs/SPEC_ROADMAP.md](./docs/SPEC_ROADMAP.md). **On-disk status:** §1.4.
 

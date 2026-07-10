@@ -1,0 +1,7 @@
+{
+  "sub": "admin-7",
+  "tenant_id": "acme",
+  "realm_access": {
+    "roles": ["admin"]
+  }
+}

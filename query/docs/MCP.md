@@ -68,6 +68,34 @@ Public URL via Caddy: `https://{site}/mcp/sse` → upstream `:8010/sse`.
 
 Direct dev: `http://127.0.0.1:8010/sse`
 
+## stdio transport (Cursor / Claude Desktop)
+
+```json
+{
+  "mcpServers": {
+    "enterprise-hybrid-rag": {
+      "command": "python",
+      "args": ["-m", "app.mcp_stdio"],
+      "cwd": "/path/to/enterprise-hybrid-rag/query",
+      "env": {
+        "MCP_ACCESS_TOKEN": "rag_mcp_<token_id>.<secret>",
+        "QDRANT_STUB": "true",
+        "EMBED_STUB": "true",
+        "CHAT_STUB": "true"
+      }
+    }
+  }
+}
+```
+
+Or with OIDC JWT bridge (`JWT_STUB=true` dev only):
+
+```bash
+cd query
+export MCP_ACCESS_TOKEN="$ACCESS_TOKEN"
+python -m app.mcp_stdio
+```
+
 ## Principles
 
 1. MCP for discrete operations; HTTP for streaming, probes, and sessions

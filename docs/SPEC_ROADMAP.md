@@ -1,30 +1,35 @@
 # Specification Roadmap — Enterprise Hybrid RAG
 
 **Parent:** [ENTERPRISE_HYBRID_RAG_SPEC.md](../ENTERPRISE_HYBRID_RAG_SPEC.md)  
-**Current platform spec:** v0.27  
-**Last updated:** 2026-07-09
+**Current platform spec:** v0.28  
+**Last updated:** 2026-07-10
 
 This document is the **living plan** for spec depth, implementation phases, and cross-sub-project alignment. Normative behavior remains in the platform spec and sub-project `SPEC.md` files.
 
 ---
 
-## 1. Current state (v0.27)
+## 1. Current state (v0.28)
 
 | Area | Status | Location |
 |------|--------|----------|
 | Modular sub-projects (5 planes + kernel) | **Specified + stub compose** | `query/`, `ingest/`, `infra/`, `inference/`, `observability/` |
 | **Catalog DDL + migrations** | **001–004 on disk** | `ingest/migrations/`, §4.4, `ingest/docs/MIGRATIONS.md` |
-| **JSON schemas (MCP + kernel)** | **10 contracts on disk** | `modules/schemas/`, §4.7 |
-| **MCP token RBAC** | **Normative** | §7.13, `003_*`, `query/docs/RBAC.md`, `TOKEN_ADMIN.md` |
-| **MCP conversation sessions** | **Normative + DDL** | §7.11, `002_*`, `query/docs/SESSIONS.md` |
+| **JSON schemas (MCP + kernel)** | **11 contracts on disk** | `modules/schemas/`, §4.7 |
+| **MCP token RBAC** | **Implemented** | `auth.py`, `token_store.py`, `rbac.py`, `/admin/mcp/tokens` |
+| **JWT bridge (JWKS)** | **Implemented** | `jwt_auth.py`, `JWT_STUB` dev mode, FR-24 contract test |
+| **MCP conversation sessions** | **Implemented** | `session_store.py`, session MCP + HTTP routes |
+| **MCP stdio transport** | **Implemented** | `mcp_stdio.py`, `MCP_ACCESS_TOKEN` |
+| **LangGraph clients LG-1–LG-3** | **Partial** | Qdrant, embed, chat, reranker, query cache |
+| **benchmark_rag.py (LG-4)** | **Implemented** | `query/benchmarks/` |
+| **migrate.py (E-14)** | **Implemented** | `ingest/app/migrate.py` |
+| **Contract tests** | **34 tests passing** | `query/tests/contract/`, `query/tests/unit/` |
 | **SigNoz APM profile** | **Partial on disk** | §10.5, `observability/docs/SIGNOZ.md` |
 | **Postgres query roles** | **Init script + grants** | `postgres-init.sh`, `004_*`, `infra/docs/POSTGRES.md` |
 | **Root `.gitignore`** | **Done** | secrets, local configs, token files |
-| LangGraph RAG orchestration + LangSmith | **Specified + stub graph** | `query/app/rag_graph.py`, TL-06/07 |
+| LangGraph RAG orchestration + LangSmith | **Partial** — real retrieve/answer; graph stub | `query/app/rag_graph.py`, TL-06/07 |
 | Test-driven development | **Normative** | §13.4, §19, `docs/TESTING.md` |
 | Implementation inventory | **Normative** | spec §1.4–1.5, §12.8 |
-| **Contract tests** | **Not implemented** | `query/tests/contract/` pending (E-15) |
-| **Application handlers** | **Stub** | `auth.py`, `token_store.py`, `session_store.py`, MCP tools pending |
+| **Ingest parsers / admin API** | **Stub** | E-16, E-17 pending |
 
 ---
 
@@ -34,7 +39,7 @@ This document is the **living plan** for spec depth, implementation phases, and 
 
 | ID | Enhancement | Spec section | Status |
 |----|-------------|--------------|--------|
-| E-01 | IF-6 Identity + MCP token auth | §3.3, §7.13, §9.2 | **Partial** — spec done; implement `auth.py`, `token_store.py` |
+| E-01 | IF-6 Identity + MCP token auth | §3.3, §7.13, §9.2 | **Done v0.28** — `auth.py`, `jwt_auth.py`, `token_store.py` |
 | E-02 | Canonical bootstrap runbook + health gates | §12.5 | **Done** |
 | E-03 | Sub-project release tag + compatibility matrix | §12.6 | Partial |
 | E-04 | Packer / image naming convention | §12.7 | Partial |
@@ -62,8 +67,8 @@ This document is the **living plan** for spec depth, implementation phases, and 
 
 | ID | Enhancement | Deliverable | Status |
 |----|-------------|-------------|--------|
-| E-14 | Catalog migrations + runner | `migrate.py`, `make migrate` | Spec done; code pending |
-| E-15 | Contract test suite | `query/tests/contract/` | Schemas on disk; tests pending |
+| E-14 | Catalog migrations + runner | `migrate.py`, `make migrate` | **Done v0.28** |
+| E-15 | Contract test suite | `query/tests/contract/` | **Partial** — 34 tests; ingest tests pending |
 | E-16 | ACL grant API + admin tools | `ingest/docs/ADMIN_API.md` | Prose only |
 | E-17 | Connector interface v2 (S3 first) | `ingest/docs/CONNECTORS.md` | Prose only |
 | E-18 | mod-chat scaffold (BFF + Keycloak login) | `chat-ui/` | Not started |
@@ -73,12 +78,12 @@ This document is the **living plan** for spec depth, implementation phases, and 
 
 | ID | Item | Sub-project | Deliverable |
 |----|------|-------------|-------------|
-| LG-1 | Real Qdrant hybrid retrieve node | query | `rag_graph.py` + `clients/qdrant.py` |
-| LG-2 | vLLM embed + chat streaming in answer node | query | inference HTTP clients |
-| LG-3 | Redis query cache node | query | `query_cache.py` wired to `check_cache` |
-| LG-4 | LangSmith + **Ragas** eval from golden set | query | `benchmarks/benchmark_rag.py --ragas` |
+| LG-1 | Real Qdrant hybrid retrieve node | query | **Done v0.28** — `clients/qdrant.py` |
+| LG-2 | vLLM embed + chat streaming in answer node | query | **Done v0.28** — `clients/chat.py`, streaming |
+| LG-3 | Redis query cache node | query | **Done v0.28** — `query_cache.py` |
+| LG-4 | LangSmith + **Ragas** eval from golden set | query | **Partial** — `benchmark_rag.py`; Ragas gate pending |
 | LG-5 | Celery task spans in LangSmith (optional) | ingest | `@traceable` on `batch_write` |
-| LG-6 | MCP conversation session store | query | `session_store.py` + §7.11 tools + §6.13.7 history |
+| LG-6 | MCP conversation session store | query | **Done v0.28** — `session_store.py` + tools |
 
 ### P1.6 — Infra & observability performance
 

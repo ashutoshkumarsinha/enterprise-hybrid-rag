@@ -41,6 +41,10 @@ class Settings:
     catalog_dsn_session: str | None = None
     stub_health: bool = True
 
+    oidc_issuer: str | None = None
+    jwks_uri: str | None = None
+    jwt_audience: str | None = None
+
     role_templates: dict[str, list[str]] = field(
         default_factory=lambda: {
             "viewer": [
@@ -82,4 +86,7 @@ def get_settings() -> Settings:
         catalog_dsn_token=os.environ.get("CATALOG_DSN_TOKEN"),
         catalog_dsn_session=os.environ.get("CATALOG_DSN_SESSION"),
         stub_health=_env_bool("STUB_HEALTH", True),
+        oidc_issuer=os.environ.get("OIDC_ISSUER"),
+        jwks_uri=os.environ.get("JWKS_URI"),
+        jwt_audience=os.environ.get("JWT_AUDIENCE"),
     )

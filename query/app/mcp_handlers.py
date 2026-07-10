@@ -6,6 +6,7 @@ from typing import Any
 
 from fastapi import HTTPException
 
+from app.auth import enforce_tenant_binding
 from app.models import AuthContext
 from app.mcp_format import format_research_markdown
 from app.rag_graph import run_rag_pipeline
@@ -29,6 +30,7 @@ async def handle_research_documents(
     """Run RAG pipeline and return markdown per §7.8."""
     settings = settings or get_settings()
     require_tool(ctx, "research_documents", settings=settings)
+    enforce_tenant_binding(ctx, args, settings=settings)
 
     tenant_id = _tenant_id(ctx, args)
     session_id = args.get("session_id")
