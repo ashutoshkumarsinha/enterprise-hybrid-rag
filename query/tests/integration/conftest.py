@@ -116,10 +116,20 @@ def reset_live_clients(live_stack_ready: None) -> Iterator[None]:
     get_settings.cache_clear()
 
 
+def _wire_app_state(test_app) -> None:
+    from app.catalog_store import create_catalog_store
+    from app.settings import get_settings
+
+    settings = get_settings()
+    test_app.state.settings = settings
+    test_app.state.token_store = InMemoryTokenStore()
+    test_app.state.session_store = InMemorySessionStore()
+    test_app.state.catalog_store = create_catalog_store(settings)
+
+
 @pytest.fixture()
 def live_client() -> Iterator[TestClient]:
-    app.state.token_store = InMemoryTokenStore()
-    app.state.session_store = InMemorySessionStore()
+    _wire_app_state(app)
     with TestClient(app) as test_client:
         yield test_client
 

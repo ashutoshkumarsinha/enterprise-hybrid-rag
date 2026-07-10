@@ -253,6 +253,9 @@ test-contract: ## pytest tests/contract in query and ingest (if present)
 	done; \
 	exit $$status
 
+test-integration: ## Live-stack integration (query; requires .env.live profile)
+	@cd $(QUERY_DIR) && chmod +x scripts/run-integration.sh && ./scripts/run-integration.sh -q
+
 # ---------------------------------------------------------------------------
 # Packer image supply chain (§12.7)
 # ---------------------------------------------------------------------------

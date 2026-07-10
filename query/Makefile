@@ -34,8 +34,9 @@ format:
 benchmark: ## Run golden-set benchmark (stub mode default)
 	@python benchmarks/benchmark_rag.py --limit 4 --golden-set benchmarks/golden_set.json.example
 
-integration: ## Live-stack integration tests (set LIVE_STACK=1; see .env.live.example)
-	@LIVE_STACK=$${LIVE_STACK:-1} pytest tests/integration -q
+integration: ## Live-stack integration tests (see .env.live.example + scripts/run-integration.sh)
+	@chmod +x scripts/run-integration.sh 2>/dev/null || true
+	@./scripts/run-integration.sh -q
 
 packer-init:
 	packer init packer/

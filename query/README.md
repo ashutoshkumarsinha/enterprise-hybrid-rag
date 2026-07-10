@@ -49,10 +49,18 @@ cd ../infra && make up PROFILE=edge
 
 ```bash
 cp .env.live.example .env   # merge with local secrets/ports; disable all *_STUB flags
-export LIVE_STACK=1 LIVE_STACK_STRICT=1
-make integration
+# Start infra + inference, then:
+./scripts/run-integration.sh -q
+# Strict mode (fail instead of skip when backends down):
+LIVE_STACK_STRICT=1 ./scripts/run-integration.sh -q
 # Optional: probe a running query container
 export QUERY_BASE_URL=http://127.0.0.1:8010
+```
+
+Load probe (requires running query service):
+
+```bash
+python benchmarks/load_test.py --url http://127.0.0.1:8010 --requests 10 --concurrency 2
 ```
 
 PR CI runs `pytest tests/unit tests/contract` only. See [../docs/TESTING.md](../docs/TESTING.md).

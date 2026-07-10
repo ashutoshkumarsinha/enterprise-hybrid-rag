@@ -5,8 +5,10 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from app.catalog_store import create_catalog_store
 from app.mcp_server import app
 from app.session_store import InMemorySessionStore
+from app.settings import get_settings
 from app.token_store import InMemoryTokenStore
 
 
@@ -19,8 +21,11 @@ def pytest_configure(config: pytest.Config) -> None:
 
 @pytest.fixture()
 def client() -> TestClient:
+    settings = get_settings()
+    app.state.settings = settings
     app.state.token_store = InMemoryTokenStore()
     app.state.session_store = InMemorySessionStore()
+    app.state.catalog_store = create_catalog_store(settings)
     with TestClient(app) as test_client:
         yield test_client
 
