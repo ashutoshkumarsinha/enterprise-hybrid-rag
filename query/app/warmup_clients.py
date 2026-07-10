@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 
+from app.catalog_store import create_catalog_store
 from app.client_factory import (
     get_chat_client,
     get_embed_client,
@@ -22,11 +23,13 @@ def warmup_clients() -> None:
     chat = get_chat_client()
     reranker = get_reranker_client()
     neo4j = get_neo4j_client()
+    catalog = create_catalog_store()
     logger.info(
-        "warmup_clients: qdrant=%s embed=%s chat=%s reranker=%s neo4j=%s",
+        "warmup_clients: qdrant=%s embed=%s chat=%s reranker=%s neo4j=%s catalog=%s",
         qdrant.healthcheck(),
         embed.healthcheck(),
         chat.healthcheck(),
         reranker.healthcheck(),
         neo4j.healthcheck(),
+        catalog.healthcheck(),
     )

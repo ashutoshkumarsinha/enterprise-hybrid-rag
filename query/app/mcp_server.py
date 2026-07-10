@@ -12,6 +12,12 @@ from fastapi.responses import StreamingResponse
 from app.models import AuthContext
 from app.deps import get_auth_context
 from app.langsmith_config import setup_langsmith
+from app.catalog_store import create_catalog_store
+from app.catalog_handlers import (
+    handle_get_document_metadata,
+    handle_list_indexed_documents,
+    handle_visualize_document_graph,
+)
 from app.mcp_handlers import (
     handle_create_session,
     handle_get_history,
@@ -36,6 +42,7 @@ async def lifespan(app: FastAPI):
     app.state.settings = settings
     app.state.token_store = create_token_store(settings)
     app.state.session_store = create_session_store(settings)
+    app.state.catalog_store = create_catalog_store(settings)
     warmup_clients()
     yield
 
@@ -55,12 +62,14 @@ def healthz() -> dict:
         get_qdrant_client,
         get_reranker_client,
     )
+    from app.catalog_store import create_catalog_store
 
     qdrant_ok = get_qdrant_client().healthcheck()
     embed_ok = get_embed_client().healthcheck()
     chat_ok = get_chat_client().healthcheck()
     reranker_ok = get_reranker_client().healthcheck()
     neo4j_ok = True if settings.stub_health else get_neo4j_client().healthcheck()
+    catalog_ok = True if settings.stub_health else create_catalog_store(settings).healthcheck()
     stores_ready = qdrant_ok and embed_ok and chat_ok and reranker_ok
     research_ready = stores_ready if not settings.stub_health else True
     status = "ok" if research_ready else "degraded"
@@ -76,7 +85,7 @@ def healthz() -> dict:
             "neo4j_ok": neo4j_ok if not settings.stub_health else True,
             "redis_ok": settings.stub_health,
             "inference_ok": embed_ok and chat_ok,
-            "catalog_ok": settings.stub_health,
+            "catalog_ok": catalog_ok if not settings.stub_health else True,
             "reranker_ok": reranker_ok,
         },
     }
@@ -160,6 +169,48 @@ async def mcp_get_history(
     body = await request.json()
     return handle_get_history(
         body, ctx=ctx, session_store=request.app.state.session_store, settings=request.app.state.settings
+    )
+
+
+@app.post("/mcp/tools/list_indexed_documents")
+async def mcp_list_indexed_documents(
+    request: Request,
+    ctx: AuthContext = Depends(get_auth_context),
+) -> dict[str, Any]:
+    body = await request.json()
+    return handle_list_indexed_documents(
+        body,
+        ctx=ctx,
+        catalog_store=request.app.state.catalog_store,
+        settings=request.app.state.settings,
+    )
+
+
+@app.post("/mcp/tools/get_document_metadata")
+async def mcp_get_document_metadata(
+    request: Request,
+    ctx: AuthContext = Depends(get_auth_context),
+) -> dict[str, Any]:
+    body = await request.json()
+    return handle_get_document_metadata(
+        body,
+        ctx=ctx,
+        catalog_store=request.app.state.catalog_store,
+        settings=request.app.state.settings,
+    )
+
+
+@app.post("/mcp/tools/visualize_document_graph")
+async def mcp_visualize_document_graph(
+    request: Request,
+    ctx: AuthContext = Depends(get_auth_context),
+) -> dict[str, Any]:
+    body = await request.json()
+    return handle_visualize_document_graph(
+        body,
+        ctx=ctx,
+        catalog_store=request.app.state.catalog_store,
+        settings=request.app.state.settings,
     )
 
 

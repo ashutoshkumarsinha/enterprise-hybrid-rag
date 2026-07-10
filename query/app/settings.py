@@ -37,6 +37,7 @@ class Settings:
     max_history_turns: int = 10
     token_default_ttl_days: int = 90
 
+    catalog_dsn_ro: str | None = None
     catalog_dsn_token: str | None = None
     catalog_dsn_session: str | None = None
     stub_health: bool = True
@@ -83,6 +84,7 @@ def get_settings() -> Settings:
         sessions_enabled=_env_bool("SESSIONS_ENABLED", True),
         max_history_turns=_env_int("SESSIONS_MAX_HISTORY_TURNS", 10),
         token_default_ttl_days=_env_int("TOKEN_DEFAULT_TTL_DAYS", 90),
+        catalog_dsn_ro=os.environ.get("CATALOG_DSN_RO"),
         catalog_dsn_token=os.environ.get("CATALOG_DSN_TOKEN"),
         catalog_dsn_session=os.environ.get("CATALOG_DSN_SESSION"),
         stub_health=_env_bool("STUB_HEALTH", True),

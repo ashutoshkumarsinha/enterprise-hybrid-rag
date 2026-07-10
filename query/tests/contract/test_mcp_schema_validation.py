@@ -31,6 +31,18 @@ SCHEMAS = REPO_ROOT / "modules" / "schemas"
             "mcp_access_token_mint.request.v1.json",
             {"tenant_id": "acme", "principal": "user:alice", "role_template": "user"},
         ),
+        (
+            "mcp_list_indexed_documents.input.v1.json",
+            {"tenant_id": "acme", "collection_id": "payments-api"},
+        ),
+        (
+            "mcp_get_document_metadata.input.v1.json",
+            {"document_id": "admin-guide", "collection_id": "payments-api"},
+        ),
+        (
+            "mcp_visualize_document_graph.input.v1.json",
+            {"document_id": "admin-guide", "collection_id": "payments-api"},
+        ),
     ],
 )
 def test_mcp_input_schemas_validate(schema_name: str, sample: dict) -> None:

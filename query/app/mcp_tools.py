@@ -9,12 +9,18 @@ from typing import Any
 from fastapi import HTTPException
 
 from app.auth import enforce_tenant_binding
+from app.catalog_handlers import (
+    handle_get_document_metadata,
+    handle_list_indexed_documents,
+    handle_visualize_document_graph,
+)
 from app.mcp_handlers import (
     handle_create_session,
     handle_get_history,
     handle_list_sessions,
     handle_research_documents,
 )
+from app.catalog_store import CatalogStore
 from app.models import AuthContext
 from app.session_store import SessionStore
 from app.settings import Settings, get_settings
@@ -37,9 +43,9 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
     "create_conversation_session": "Create a persisted MCP conversation session",
     "list_conversation_sessions": "List conversation sessions for the current principal",
     "get_conversation_history": "Load messages for a conversation session",
-    "list_indexed_documents": "List documents in the catalog (stub)",
-    "get_document_metadata": "Fetch document metadata (stub)",
-    "visualize_document_graph": "Render document graph as Mermaid (stub)",
+    "list_indexed_documents": "List documents in the catalog (ACL-filtered markdown table)",
+    "get_document_metadata": "Fetch document metadata JSON (ACL-filtered)",
+    "visualize_document_graph": "Render document graph as Mermaid",
 }
 
 
@@ -70,9 +76,14 @@ async def dispatch_tool(
     *,
     ctx: AuthContext,
     session_store: SessionStore,
+    catalog_store: CatalogStore | None = None,
     settings: Settings | None = None,
 ) -> Any:
     settings = settings or get_settings()
+    if catalog_store is None:
+        from app.catalog_store import create_catalog_store
+
+        catalog_store = create_catalog_store(settings)
     enforce_tenant_binding(ctx, arguments, settings=settings)
 
     if tool_name == "research_documents":
@@ -86,11 +97,17 @@ async def dispatch_tool(
         return handle_list_sessions(arguments, ctx=ctx, session_store=session_store, settings=settings)
     if tool_name == "get_conversation_history":
         return handle_get_history(arguments, ctx=ctx, session_store=session_store, settings=settings)
-    if tool_name in ("list_indexed_documents", "get_document_metadata", "visualize_document_graph"):
-        return {
-            "stub": True,
-            "message": f"{tool_name} not yet implemented",
-            "arguments": arguments,
-        }
+    if tool_name == "list_indexed_documents":
+        return handle_list_indexed_documents(
+            arguments, ctx=ctx, catalog_store=catalog_store, settings=settings
+        )
+    if tool_name == "get_document_metadata":
+        return handle_get_document_metadata(
+            arguments, ctx=ctx, catalog_store=catalog_store, settings=settings
+        )
+    if tool_name == "visualize_document_graph":
+        return handle_visualize_document_graph(
+            arguments, ctx=ctx, catalog_store=catalog_store, settings=settings
+        )
 
     raise HTTPException(status_code=404, detail={"code": "not_found", "message": tool_name})

@@ -20,7 +20,7 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | **MCP conversation sessions** | **Implemented** | `session_store.py`, session MCP + HTTP routes |
 | **MCP stdio transport** | **Implemented** | `mcp_stdio.py`, `MCP_ACCESS_TOKEN` |
 | **LangGraph clients LG-1–LG-3** | **Done v0.28** | Qdrant, embed, chat, reranker, query cache |
-| **Neo4j graph enrich** | **Done v0.29** | `clients/neo4j.py`, `graph_enrich.py` |
+| **Catalog MCP tools** | **Done v0.30** | `catalog_store.py`, ACL filtering |
 | **benchmark_rag.py (LG-4)** | **Implemented** | `query/benchmarks/` |
 | **migrate.py (E-14)** | **Implemented** | `ingest/app/migrate.py` |
 | **Contract tests** | **34 tests passing** | `query/tests/contract/`, `query/tests/unit/` |

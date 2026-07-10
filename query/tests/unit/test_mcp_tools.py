@@ -5,10 +5,13 @@ from __future__ import annotations
 from app.mcp_tools import list_tool_definitions, load_tool_input_schema
 
 
-def test_list_tool_definitions_includes_research() -> None:
+def test_list_tool_definitions_includes_research_and_catalog() -> None:
     names = {item["name"] for item in list_tool_definitions()}
     assert "research_documents" in names
     assert "create_conversation_session" in names
+    assert "list_indexed_documents" in names
+    assert "get_document_metadata" in names
+    assert "visualize_document_graph" in names
 
 
 def test_research_schema_has_query() -> None:

@@ -18,6 +18,7 @@ from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
 from app.auth import resolve_auth_from_bearer
+from app.catalog_store import create_catalog_store
 from app.mcp_tools import dispatch_tool, list_tool_definitions
 from app.session_store import create_session_store
 from app.settings import get_settings
@@ -31,6 +32,7 @@ _server = Server(SERVER_NAME)
 _settings = get_settings()
 _token_store = create_token_store(_settings)
 _session_store = create_session_store(_settings)
+_catalog_store = create_catalog_store(_settings)
 
 
 def _auth_context() -> Any:
@@ -66,10 +68,15 @@ async def _call_tool(name: str, arguments: dict[str, Any] | None) -> list[TextCo
             args,
             ctx=ctx,
             session_store=_session_store,
+            catalog_store=_catalog_store,
             settings=_settings,
         )
         if isinstance(result, str):
             text = result
+        elif name == "list_indexed_documents" and isinstance(result, dict) and "markdown" in result:
+            text = result["markdown"]
+        elif name == "visualize_document_graph" and isinstance(result, dict) and "mermaid" in result:
+            text = result["mermaid"]
         else:
             text = json.dumps(result, indent=2)
         return [TextContent(type="text", text=text)]
