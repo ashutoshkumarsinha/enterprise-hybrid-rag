@@ -92,6 +92,8 @@ services:
       POSTGRES_DB: ${CATALOG_DB:-catalog}
       INGEST_RW_PASSWORD: ${INGEST_RW_PASSWORD:-change-me-ingest}
       QUERY_RO_PASSWORD: ${QUERY_RO_PASSWORD:-change-me-query}
+      QUERY_SESSION_RW_PASSWORD: ${QUERY_SESSION_RW_PASSWORD:-change-me-query-session}
+      QUERY_TOKEN_RW_PASSWORD: ${QUERY_TOKEN_RW_PASSWORD:-change-me-query-token}
       KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-change-me-keycloak}
     volumes:
       - postgres-data:/var/lib/postgresql/data

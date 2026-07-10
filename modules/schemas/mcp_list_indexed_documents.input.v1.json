@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hybrid-rag.local/schemas/mcp_list_indexed_documents.input.v1.json",
+  "title": "MCP list_indexed_documents input",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "tenant_id": { "type": "string" },
+    "collection_id": { "type": "string" },
+    "document_id": { "type": "string" },
+    "limit": { "type": "integer", "minimum": 1, "maximum": 500, "default": 50 },
+    "cursor": { "type": "string" }
+  }
+}

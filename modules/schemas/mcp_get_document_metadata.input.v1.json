@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hybrid-rag.local/schemas/mcp_get_document_metadata.input.v1.json",
+  "title": "MCP get_document_metadata input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["document_id"],
+  "properties": {
+    "tenant_id": { "type": "string" },
+    "collection_id": { "type": "string" },
+    "document_id": { "type": "string", "minLength": 1 },
+    "version_id": { "type": "string" }
+  }
+}

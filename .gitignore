@@ -1,0 +1,201 @@
+# Enterprise Hybrid RAG — root .gitignore
+# Keep *.example templates tracked; ignore local copies and secrets.
+
+# -----------------------------------------------------------------------------
+# Secrets and credentials
+# -----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+*.pem
+*.key
+*.p12
+*.crt
+secrets/
+credentials/
+rag_mcp_*
+*.mcp-token
+
+# Langfuse / API key files (local exports)
+**/pk-lf-*
+**/sk-lf-*
+
+# -----------------------------------------------------------------------------
+# Local configuration (templates: *.example stay tracked)
+# -----------------------------------------------------------------------------
+**/config/*.toml
+!**/config/*.toml.example
+
+infra/caddy/Caddyfile
+!infra/caddy/Caddyfile.example
+
+packer/versions.pkrvars.hcl
+!packer/versions.pkrvars.hcl.example
+
+# Benchmark datasets with real corpus / prod baselines
+query/benchmarks/golden_set.json
+!query/benchmarks/golden_set.json.example
+query/benchmarks/baselines.json
+!query/benchmarks/baselines.json.example
+
+# -----------------------------------------------------------------------------
+# Python
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+.venv/
+venv/
+ENV/
+env/
+.python-version
+
+# Test / lint / type check
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+pytestdebug.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# -----------------------------------------------------------------------------
+# Node / TypeScript (mod-chat, future frontends)
+# -----------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+dist/
+dist-ssr/
+*.local
+.vite/
+.next/
+out/
+.nuxt/
+.turbo/
+*.tsbuildinfo
+
+# -----------------------------------------------------------------------------
+# Docker / Compose
+# -----------------------------------------------------------------------------
+docker-compose.override.yml
+docker-compose.*.local.yml
+.docker/
+
+# -----------------------------------------------------------------------------
+# Packer / images
+# -----------------------------------------------------------------------------
+packer_cache/
+*.auto.pkrvars.hcl
+!*.auto.pkrvars.hcl.example
+
+# -----------------------------------------------------------------------------
+# ML / inference (local weights and caches)
+# -----------------------------------------------------------------------------
+*.gguf
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.onnx
+models/
+checkpoints/
+.cache/
+huggingface/
+.torch/
+
+# -----------------------------------------------------------------------------
+# Data / ingest scratch (never commit customer corpora)
+# -----------------------------------------------------------------------------
+data/
+staging/
+scratch/
+tmp/
+temp/
+uploads/
+raw/
+*.sqlite
+*.sqlite3
+*.db
+
+# -----------------------------------------------------------------------------
+# Logs and runtime
+# -----------------------------------------------------------------------------
+*.log
+logs/
+*.pid
+*.seed
+
+# -----------------------------------------------------------------------------
+# OS / editor
+# -----------------------------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Cursor local state (keep committed rules/skills outside repo)
+.cursor/projects/
+
+# -----------------------------------------------------------------------------
+# Terraform / Helm (future deploy/)
+# -----------------------------------------------------------------------------
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log
+deploy/helm/**/charts/
+deploy/helm/**/Chart.lock

@@ -1,68 +1,73 @@
 # Specification Roadmap — Enterprise Hybrid RAG
 
 **Parent:** [ENTERPRISE_HYBRID_RAG_SPEC.md](../ENTERPRISE_HYBRID_RAG_SPEC.md)  
-**Current platform spec:** v0.22  
+**Current platform spec:** v0.27  
 **Last updated:** 2026-07-09
 
 This document is the **living plan** for spec depth, implementation phases, and cross-sub-project alignment. Normative behavior remains in the platform spec and sub-project `SPEC.md` files.
 
 ---
 
-## 1. Current state (v0.20)
+## 1. Current state (v0.27)
 
 | Area | Status | Location |
 |------|--------|----------|
 | Modular sub-projects (5 planes + kernel) | **Specified + stub compose** | `query/`, `ingest/`, `infra/`, `inference/`, `observability/` |
-| **Coding standards** | **Normative** | §23, `docs/CODING_STANDARDS.md`, `pyproject.toml`, TL-14/15/16 |
-| **Catalog DDL + JSON schemas** | **Partial on disk** | §4.4.1, §4.7, `ingest/migrations/`, `modules/schemas/` |
-| **Root Makefile** | **Done** | `make bootstrap`, `make health`, `make lint` |
-| **Implementation inventory** | **Normative** | spec §1.4–1.5, §12.8, stub-phase conventions |
-| **Multi-audience documentation** | **Normative** | §21, `docs/DOCUMENTATION.md`, audience guides, TL-12/13 |
-| **TL-12 integration diagrams** | **Done v0.20** | `*/docs/INTEGRATION.md`, `STACK.md`, `OTEL.md`, `docs/PERFORMANCE.md` |
-| **Test-driven development** | **Normative** | §13.4, §19, `docs/TESTING.md`, TL-11, FR-33/34 |
-| **Docling** parser tier + PyMuPDF fast path | **Normative** | §5.1.1, `ingest/docs/DOCLING.md`, TL-10 |
-| **Ragas** + **k6** / **Locust** eval harness | **Normative + scaffold** | §13, `query/benchmarks/`, TL-08/09 |
+| **Catalog DDL + migrations** | **001–004 on disk** | `ingest/migrations/`, §4.4, `ingest/docs/MIGRATIONS.md` |
+| **JSON schemas (MCP + kernel)** | **10 contracts on disk** | `modules/schemas/`, §4.7 |
+| **MCP token RBAC** | **Normative** | §7.13, `003_*`, `query/docs/RBAC.md`, `TOKEN_ADMIN.md` |
+| **MCP conversation sessions** | **Normative + DDL** | §7.11, `002_*`, `query/docs/SESSIONS.md` |
+| **SigNoz APM profile** | **Partial on disk** | §10.5, `observability/docs/SIGNOZ.md` |
+| **Postgres query roles** | **Init script + grants** | `postgres-init.sh`, `004_*`, `infra/docs/POSTGRES.md` |
+| **Root `.gitignore`** | **Done** | secrets, local configs, token files |
 | LangGraph RAG orchestration + LangSmith | **Specified + stub graph** | `query/app/rag_graph.py`, TL-06/07 |
-| Enterprise performance program | **Normative** | spec §6.3.2, §18.14–18.17 |
-| MinIO object store | **Specified + init** | `infra/docs/MINIO.md` |
-| Shared contracts (quotas) | **Normative** | `modules/SHARED_CONTRACTS.md` §12 |
+| Test-driven development | **Normative** | §13.4, §19, `docs/TESTING.md` |
+| Implementation inventory | **Normative** | spec §1.4–1.5, §12.8 |
+| **Contract tests** | **Not implemented** | `query/tests/contract/` pending (E-15) |
+| **Application handlers** | **Stub** | `auth.py`, `token_store.py`, `session_store.py`, MCP tools pending |
 
 ---
 
 ## 2. Enhancement themes (priority order)
 
-### P0 — Contract completeness (now → next sprint)
+### P0 — Contract completeness
 
-| ID | Enhancement | Spec section | Owner sub-project |
-|----|-------------|--------------|-------------------|
-| E-01 | IF-6 Identity (Keycloak OIDC, JWT claims) | §3.3, §9.2 | infra + query |
-| E-02 | Canonical bootstrap runbook + health gates | §12.5 | platform |
-| E-03 | Sub-project release tag + compatibility matrix | §12.6 | platform |
-| E-04 | Packer / image naming convention | §12.7 | platform |
-| E-05 | Auth layering: Caddy bearer vs OIDC JWT | §7.10, §9 | infra + query |
-| E-06 | OTel span catalog aligned with Langfuse hierarchy | §10, `observability/docs/` | observability |
-| E-07 | Performance guide + baselines | **Done v0.13** — `docs/PERFORMANCE.md` | platform |
-| E-08 | Implementation language stack | **Done v0.14** — spec §1.3 | platform |
-| E-09 | Infra + observability performance plans | **Done v0.14** — sub-project `docs/PERFORMANCE.md` | infra, observability |
+| ID | Enhancement | Spec section | Status |
+|----|-------------|--------------|--------|
+| E-01 | IF-6 Identity + MCP token auth | §3.3, §7.13, §9.2 | **Partial** — spec done; implement `auth.py`, `token_store.py` |
+| E-02 | Canonical bootstrap runbook + health gates | §12.5 | **Done** |
+| E-03 | Sub-project release tag + compatibility matrix | §12.6 | Partial |
+| E-04 | Packer / image naming convention | §12.7 | Partial |
+| E-05 | Auth layering: token-first + optional JWT bridge | §7.10, §7.13 | **Done** v0.26 |
+| E-06 | OTel span catalog aligned with Langfuse hierarchy | §10.4 | **Done** — wire in code pending |
+| E-07 | Performance guide + baselines | **Done v0.13** | `docs/PERFORMANCE.md` |
+| E-08 | Implementation language stack | **Done v0.14** | spec §1.3 |
+| E-09 | Infra + observability performance plans | **Done v0.14** | sub-project `docs/PERFORMANCE.md` |
 | E-10 | LangGraph + LangSmith for Python query plane | **Done v0.15** | query |
-| E-11 | Enterprise performance program (SLO, degrade, quotas, scale) | **Done v0.16** | platform |
+| E-11 | Enterprise performance program | **Done v0.16** | platform |
 | E-12 | Docling parser tier + Ragas/k6/Locust harness | **Done v0.17** | ingest + query |
 | E-13 | Test-driven development program | **Done v0.18** | platform |
-| E-20 | Exhaustive documentation (audiences, Mermaid, code comments) | **Done v0.19** | platform |
+| E-20 | Exhaustive documentation (audiences, Mermaid) | **Done v0.19** | platform |
 | E-35 | Implementation inventory + spec/repo alignment | **Done v0.20** | platform |
-| E-36 | Coding standards (Black, Ruff, patterns, logging) | **Done v0.21** | platform |
-| E-37 | Catalog DDL + JSON schemas + IF-6/MCP/OTel/Makefile depth | **Done v0.22** | platform |
+| E-36 | Coding standards (Black, Ruff, patterns) | **Done v0.21** | platform |
+| E-37 | Catalog DDL + JSON schemas + IF-6/MCP/OTel/Makefile | **Done v0.22** | platform |
+| E-38 | MCP conversation sessions | **Done v0.24** | §7.11, `002_*` |
+| E-39 | Token-based MCP RBAC | **Done v0.26** | §7.13, `003_*` |
+| E-40 | Token admin OpenAPI | **Done v0.27** | `query/docs/TOKEN_ADMIN.md` |
+| E-41 | Token mint JSON schemas | **Done v0.27** | `mcp_access_token_mint.*.v1.json` |
+| E-42 | Postgres query roles + table grants | **Done v0.27** | `postgres-init.sh`, `004_*` |
+| E-43 | Migration runner spec | **Done v0.27** | `ingest/docs/MIGRATIONS.md`, §4.4.4 |
 
 ### P1 — Implementation-ready depth
 
-| ID | Enhancement | Deliverable |
-|----|-------------|-------------|
-| E-14 | Catalog DDL migrations (normative SQL) | `ingest/migrations/` + spec §4.4 |
-| E-15 | Golden-set + `tests/` scaffold (TDD) | `query/tests/`, `ingest/tests/`, `modules/schemas/` |
-| E-16 | ACL grant API + admin tools | spec §9 + `ingest/docs/ADMIN_API.md` |
-| E-17 | Connector interface v2 (S3 first) | spec §5.8 + `ingest/docs/CONNECTORS.md` |
-| E-18 | mod-chat scaffold (BFF + Keycloak login) | `chat-ui/` optional repo |
-| E-19 | Helm chart sketch (values per sub-project) | `deploy/helm/` |
+| ID | Enhancement | Deliverable | Status |
+|----|-------------|-------------|--------|
+| E-14 | Catalog migrations + runner | `migrate.py`, `make migrate` | Spec done; code pending |
+| E-15 | Contract test suite | `query/tests/contract/` | Schemas on disk; tests pending |
+| E-16 | ACL grant API + admin tools | `ingest/docs/ADMIN_API.md` | Prose only |
+| E-17 | Connector interface v2 (S3 first) | `ingest/docs/CONNECTORS.md` | Prose only |
+| E-18 | mod-chat scaffold (BFF + Keycloak login) | `chat-ui/` | Not started |
+| E-19 | Helm chart sketch | `deploy/helm/` | Not started |
 
 ### P1.5 — LangGraph implementation (stub → production)
 
@@ -75,7 +80,7 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | LG-5 | Celery task spans in LangSmith (optional) | ingest | `@traceable` on `batch_write` |
 | LG-6 | MCP conversation session store | query | `session_store.py` + §7.11 tools + §6.13.7 history |
 
-### P1.6 — Infra & observability performance (implement next)
+### P1.6 — Infra & observability performance
 
 | ID | Item | Sub-project | Deliverable |
 |----|------|-------------|-------------|
@@ -95,9 +100,8 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | E-34 | mTLS between tiers | infra Caddy + service mesh option |
 | E-21 | Tenant offboarding automation | spec §9.1 purge API |
 | E-22 | Version retention job | nightly Qdrant + Neo4j prune |
-| E-23 | SigNoz dashboards as code | **Partial** — §10.5.5 stubs in `observability/dashboards/`; API import automation pending |
-| E-35 | MCP conversation sessions | **Done** — §7.11, §4.4.2, `002_conversation_sessions_v1.sql` (v0.24); implement LG-6 |
-| E-36 | Session retention prune job | `sessions.max_age_days` nightly job |
+| E-23 | SigNoz dashboards as code | **Partial** — §10.5.5 stubs; API import automation pending |
+| E-44 | Session retention prune job | `sessions.max_age_days` nightly job (was mis-ID E-36 in P2) |
 | E-24 | Multi-region read replica story | spec §12.4 expansion |
 | E-25 | Embedding dimension migration playbook | resolves OQ2 |
 | E-26 | Chaos test suite automation | spec §13.1 monthly staging |
@@ -129,8 +133,8 @@ flowchart TB
     SPEC --> OBS[observability/SPEC.md]
     SPEC --> ING[ingest/SPEC.md]
     SPEC --> Q[query/SPEC.md]
-    Q --> QD[query/docs/ LANGGRAPH MCP PERFORMANCE]
-    ING --> ID[ingest/docs/ DOCLING PARSERS]
+    Q --> QD[query/docs/ LANGGRAPH MCP RBAC SESSIONS TOKEN_ADMIN]
+    ING --> ID[ingest/docs/ DOCLING PARSERS MIGRATIONS]
     Q --> BENCH[query/benchmarks/ Ragas k6 Locust]
 ```
 
@@ -145,12 +149,13 @@ Before tagging `rag-v1.x`, verify:
 - [ ] `index_schema_version` matches across infra, ingest, query configs
 - [ ] `embed_dimension` matches inference embed model output
 - [ ] IF-1 init-db completed (`make init-db`)
+- [ ] Catalog migrations applied (`cd ingest && make migrate`)
 - [ ] IF-4 inference health passes for required models
 - [ ] IF-5 OTLP + Langfuse keys configured (query)
-- [ ] IF-6 Keycloak realm imported; test user can obtain JWT (prod)
+- [ ] IF-6 Keycloak realm imported; MCP admin token minted (`POST /admin/mcp/tokens`)
 - [ ] Unit + contract tests pass on every PR (`pytest tests/unit tests/contract`) — TL-11
 - [ ] Audience guides and sub-project READMEs current for shipped behavior — FR-35, NFR-25
-- [ ] MCP contract tests pass (`research_documents`, `/research/stream`)
+- [ ] MCP contract tests pass (`research_documents`, session tools, `/research/stream`)
 - [ ] Golden-set p95 within baseline × 1.1 (spec §18.7)
 - [ ] Ragas gates pass on golden set (`benchmark_rag.py --ragas`)
 - [ ] k6 or Locust soak passes NFR-23 (`load_test.py`)
@@ -180,9 +185,14 @@ Before tagging `rag-v1.x`, verify:
 | **v0.19** | Documentation engineering (§21, audience guides, Mermaid, TL-12/13) |
 | **v0.20** | Implementation inventory (§1.4–1.5), §12.8 artifacts, layout `modules/`, TL-12 integration diagrams |
 | **v0.21** | Coding standards (§23, `docs/CODING_STANDARDS.md`, `pyproject.toml`) |
-| **v0.22** | Catalog DDL §4.4.1, JSON schemas §4.7, IF-6 §9.2, MCP I/O §7.3.1, OTel §10.4, Makefile §12.9, benchmark CLI §13.2.1 |
-| v0.23 (planned) | Implement LG-1/LG-4, auth.py, MCP tools, contract tests — §22 |
-| v1.0 (target) | First implementable release train with contract tests green |
+| **v0.22** | Catalog DDL §4.4.1, JSON schemas §4.7, IF-6 §9.2, MCP I/O §7.3.1, OTel §10.4, Makefile §12.9 |
+| **v0.23** | SigNoz §10.5, collector fan-out, dashboard/alert stubs |
+| **v0.24** | MCP conversation sessions §7.11, §6.13.7, `002_*`, FR-41–43 |
+| **v0.25** | MCP RBAC permission matrix §7.13, §9.4, FR-44–46 |
+| **v0.26** | Token-based MCP RBAC — `rag_mcp_*`, `003_*`, FR-23/45/47–48 |
+| **v0.27** | §22 sync, token admin API, migration runner spec, `004_*` grants, MCP schemas, `.gitignore` |
+| **v0.28** (next) | Implement auth, token_store, session_store, MCP handlers, contract tests — §22.7 |
+| **rag-v1.0** (target) | First implementable release train with contract tests green |
 
 ---
 
@@ -196,7 +206,7 @@ See also platform spec **§22** (what to spec next).
 | OQ2 | Embed model swap without full reindex | v0.13 — migration playbook |
 | OQ3 | Federated multi-region MCP | v1.1+ |
 | OQ4 | Keycloak vs external IdP (Azure AD) | Document federation in `infra/docs/KEYCLOAK.md` |
-| OQ5 | Query JWT validation: inline vs sidecar | OD9 — recommend inline JWKS in query |
+| OQ5 | MCP auth: token vs JWT | **Closed v0.26** — token-first; JWT bridge optional |
 
 ---
 

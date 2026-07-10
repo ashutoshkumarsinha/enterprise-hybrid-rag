@@ -10,11 +10,17 @@ psql -v ON_ERROR_STOP=1 --username "${POSTGRES_USER}" --dbname "${POSTGRES_DB}" 
         IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'query_ro') THEN
             CREATE ROLE query_ro LOGIN PASSWORD '${QUERY_RO_PASSWORD}';
         END IF;
+        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'query_session_rw') THEN
+            CREATE ROLE query_session_rw LOGIN PASSWORD '${QUERY_SESSION_RW_PASSWORD}';
+        END IF;
+        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'query_token_rw') THEN
+            CREATE ROLE query_token_rw LOGIN PASSWORD '${QUERY_TOKEN_RW_PASSWORD}';
+        END IF;
     END
     \$\$;
 
-    GRANT CONNECT ON DATABASE ${POSTGRES_DB} TO ingest_rw, query_ro;
-    GRANT USAGE ON SCHEMA public TO ingest_rw, query_ro;
+    GRANT CONNECT ON DATABASE ${POSTGRES_DB} TO ingest_rw, query_ro, query_session_rw, query_token_rw;
+    GRANT USAGE ON SCHEMA public TO ingest_rw, query_ro, query_session_rw, query_token_rw;
 
     ALTER DEFAULT PRIVILEGES IN SCHEMA public
       GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ingest_rw;

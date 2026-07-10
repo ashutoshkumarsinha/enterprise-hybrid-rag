@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hybrid-rag.local/schemas/mcp_access_token_mint.response.v1.json",
+  "title": "MCP access token mint response",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "token_id",
+    "access_token",
+    "tenant_id",
+    "principal",
+    "permissions",
+    "created_at"
+  ],
+  "properties": {
+    "token_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "access_token": {
+      "type": "string",
+      "pattern": "^rag_mcp_[0-9a-f-]+\\.[A-Za-z0-9_-]+$"
+    },
+    "tenant_id": {
+      "type": "string"
+    },
+    "principal": {
+      "type": "string"
+    },
+    "permissions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

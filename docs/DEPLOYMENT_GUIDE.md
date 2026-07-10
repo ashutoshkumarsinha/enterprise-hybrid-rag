@@ -161,6 +161,30 @@ make health
 
 Each sub-project README documents ports and `make` targets.
 
+### 3.6 Catalog migrations
+
+After infra Postgres is healthy, apply catalog DDL (platform §4.4, §12.5 step 3):
+
+```bash
+# Recommended (when migrate.py lands):
+cd ingest && make migrate
+
+# Manual equivalent:
+export CATALOG_DSN="postgresql://ingest_rw:${INGEST_RW_PASSWORD}@127.0.0.1:5432/catalog"
+for f in migrations/00{1,2,3,4}_*.sql; do
+  psql "$CATALOG_DSN" -v ON_ERROR_STOP=1 -f "$f"
+done
+```
+
+| Migration | Purpose |
+|-----------|---------|
+| `001_catalog_v1.sql` | Core catalog tables |
+| `002_conversation_sessions_v1.sql` | MCP conversation sessions |
+| `003_mcp_access_tokens_v1.sql` | `rag_mcp_*` token RBAC |
+| `004_grant_query_roles_v1.sql` | Grants for `query_session_rw`, `query_token_rw` |
+
+See [ingest/docs/MIGRATIONS.md](../ingest/docs/MIGRATIONS.md). Mint first MCP admin token per [query/docs/TOKEN_ADMIN.md](../query/docs/TOKEN_ADMIN.md) before enabling `auth.required=true`.
+
 ---
 
 ## 4. Configuration profiles

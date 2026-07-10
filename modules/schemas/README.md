@@ -11,6 +11,11 @@ Normative machine-readable contracts for contract tests and CI validation.
 | `mcp_research_documents.input.v1.json` | MCP `research_documents` tool arguments (+ `session_id`) |
 | `mcp_create_conversation_session.input.v1.json` | MCP `create_conversation_session` |
 | `mcp_get_conversation_history.input.v1.json` | MCP `get_conversation_history` |
+| `mcp_list_indexed_documents.input.v1.json` | MCP `list_indexed_documents` |
+| `mcp_get_document_metadata.input.v1.json` | MCP `get_document_metadata` |
+| `mcp_visualize_document_graph.input.v1.json` | MCP `visualize_document_graph` |
+| `mcp_access_token_mint.request.v1.json` | `POST /admin/mcp/tokens` body |
+| `mcp_access_token_mint.response.v1.json` | Mint response (includes one-time `access_token`) |
 | `events.ingest_completed.v1.json` | Redis Stream `ingest.completed` event |
 
 **Validation (illustrative):**

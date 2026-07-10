@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hybrid-rag.local/schemas/mcp_visualize_document_graph.input.v1.json",
+  "title": "MCP visualize_document_graph input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["document_id"],
+  "properties": {
+    "tenant_id": { "type": "string" },
+    "collection_id": { "type": "string" },
+    "document_id": { "type": "string", "minLength": 1 },
+    "version_id": { "type": "string" },
+    "depth": { "type": "integer", "minimum": 1, "maximum": 5, "default": 2 },
+    "format": { "type": "string", "enum": ["mermaid"], "default": "mermaid" }
+  }
+}

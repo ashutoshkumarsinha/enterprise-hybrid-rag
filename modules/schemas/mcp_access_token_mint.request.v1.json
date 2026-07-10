@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hybrid-rag.local/schemas/mcp_access_token_mint.request.v1.json",
+  "title": "MCP access token mint request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tenant_id", "principal"],
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "principal": {
+      "type": "string",
+      "pattern": "^(user|service|group):[a-zA-Z0-9._:@-]+$",
+      "description": "Catalog principal, e.g. user:alice"
+    },
+    "label": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "role_template": {
+      "type": "string",
+      "enum": ["viewer", "user", "collection-admin", "admin"]
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^mcp(\\.[a-z0-9_-]+|\\.[a-z0-9_-]+\\.[a-z0-9_-]+|\\.[a-z0-9_-]+\\*|\\*)$"
+      },
+      "uniqueItems": true
+    },
+    "expires_in_days": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3650
+    }
+  }
+}

@@ -10,7 +10,7 @@ All runtime planes are **independent sub-projects** connected via [`modules/SHAR
 
 | Document | Description |
 |----------|-------------|
-| [ENTERPRISE_HYBRID_RAG_SPEC.md](./ENTERPRISE_HYBRID_RAG_SPEC.md) | Platform overview (**v0.22** — contracts, auth, ops depth) |
+| [ENTERPRISE_HYBRID_RAG_SPEC.md](./ENTERPRISE_HYBRID_RAG_SPEC.md) | Platform overview (**v0.27** — token RBAC, sessions, migrations, roadmap sync) |
 | [docs/CODING_STANDARDS.md](./docs/CODING_STANDARDS.md) | Python/TS style, Black/Ruff, LangGraph patterns, PR gate |
 | [docs/DOCUMENTATION.md](./docs/DOCUMENTATION.md) | Documentation standards, Mermaid policy, code comments |
 | [docs/USER_GUIDE.md](./docs/USER_GUIDE.md) | End-user guide (chat, MCP, scope, citations) |
@@ -32,7 +32,10 @@ All runtime planes are **independent sub-projects** connected via [`modules/SHAR
 |----------|-------------|
 | [query/README.md](./query/README.md) | Sub-project entry point |
 | [query/SPEC.md](./query/SPEC.md) | MCP + RAG boundary |
-| [query/docs/MCP.md](./query/docs/MCP.md) | Tools, SSE transport |
+| [query/docs/MCP.md](./query/docs/MCP.md) | Tools, SSE + stdio transport |
+| [query/docs/RBAC.md](./query/docs/RBAC.md) | Token-based MCP RBAC |
+| [query/docs/SESSIONS.md](./query/docs/SESSIONS.md) | Conversation session persistence |
+| [query/docs/TOKEN_ADMIN.md](./query/docs/TOKEN_ADMIN.md) | MCP token mint/revoke admin API |
 | [query/docs/PIPELINE.md](./query/docs/PIPELINE.md) | Retrieve → rerank → answer |
 | [query/docs/LANGGRAPH.md](./query/docs/LANGGRAPH.md) | LangGraph orchestration + LangSmith |
 | [query/docs/STREAMING.md](./query/docs/STREAMING.md) | `/research/stream` SSE |
@@ -126,4 +129,4 @@ See [packer/README.md](./packer/README.md).
 
 ## Status
 
-Draft **v0.22** — catalog DDL, JSON schemas, IF-6/MCP/OTel depth; coding §23; TDD §19.
+Draft **v0.27** — token RBAC, MCP sessions, catalog migrations 001–004, token admin API spec; coding §23; TDD §19.

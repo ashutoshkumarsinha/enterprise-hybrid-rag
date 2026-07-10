@@ -25,7 +25,8 @@ description: Hybrid RAG over ingested enterprise documents
 | `get_document_metadata` | JSON metadata + ACL |
 
 **Session detail:** [SESSIONS.md](./SESSIONS.md)  
-**RBAC:** [RBAC.md](./RBAC.md) — tool permissions §7.13
+**RBAC:** [RBAC.md](./RBAC.md) — tool permissions §7.13  
+**Token admin:** [TOKEN_ADMIN.md](./TOKEN_ADMIN.md) — mint/revoke `rag_mcp_*` tokens
 
 ## Optional admin tools
 
