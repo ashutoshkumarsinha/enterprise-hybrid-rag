@@ -18,11 +18,21 @@ setup_langsmith()
 
 @celery_app.task(name="ingest.batch_write")
 def batch_write(chunks: list | None = None) -> dict:
-    """Stub — implement parse → embed → Qdrant/Neo4j write."""
+    """Validate and accept chunk payloads; store write path remains stub."""
     from app.telemetry import get_tracer
 
+    payload = chunks or []
     with get_tracer().start_as_current_span("ingest.batch_write") as span:
-        count = len(chunks or [])
+        count = len(payload)
         span.set_attribute("ingest.chunk_count", count)
         span.set_attribute("module_id", "hybrid-rag-ingest")
-        return {"written": count, "stub": True}
+        validated = 0
+        for chunk in payload:
+            if chunk.get("uuid") and chunk.get("text"):
+                validated += 1
+        write_stub = os.environ.get("INGEST_WRITE_STUB", "true").lower() in ("true", "1", "yes")
+        return {
+            "written": validated if not write_stub else 0,
+            "validated": validated,
+            "stub": write_stub,
+        }

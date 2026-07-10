@@ -42,6 +42,9 @@ migrate: ## Apply pending catalog migrations (requires CATALOG_DSN)
 migrate-status: ## Show applied/pending migrations
 	@python -m app.migrate --status
 
+test: ## Run ingest unit + contract tests
+	@python -m pytest tests/unit tests/contract -q
+
 packer-init:
 	packer init packer/
 

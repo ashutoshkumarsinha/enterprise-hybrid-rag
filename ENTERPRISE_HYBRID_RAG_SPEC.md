@@ -157,7 +157,7 @@ flowchart LR
 | Sub-project | Docs | Compose / ops | Application code | Tests / schemas |
 |-------------|------|---------------|------------------|-----------------|
 | **query** | **Complete** — `SPEC.md`, 9× `docs/` (incl. RBAC, SESSIONS, TOKEN_ADMIN, MCP stdio) | `compose/`, `Makefile`, `Dockerfile` | **rag-v1.0 candidate** — full LangGraph path + supervisor + breakers | **62 contract/unit tests** |
-| **ingest** | **Complete** — `SPEC.md`, 7× `docs/` (incl. MIGRATIONS) | `compose/`, worker `Dockerfile` | **Partial** — orchestrator stub; `migrate.py` implemented | **Migrations 001–004** on disk; no `tests/` yet |
+| **ingest** | **Complete** — `SPEC.md`, 7× `docs/` (incl. MIGRATIONS) | `compose/`, worker `Dockerfile` | **Partial v0.32** — parser router + `parse_document` + document enqueue | **7 contract/unit tests**; migrations 001–004 |
 | **infra** | **Complete** — `SPEC.md`, 9× `docs/` | Full store compose; Qdrant gRPC **6334** | **Partial** — `init-db.sh`, `init-minio.sh`, `postgres-init.sh` (4 catalog roles), `healthcheck.sh`, `backup.sh`, `render_caddyfile.py`, `hybrid-rag-realm.json` | No `postgres-catalog-indexes.sql` (INF-P2) |
 | **inference** | **Complete** — `SPEC.md`, 7× `docs/` | vLLM `v0.6.6` compose profiles | **Partial** — `reranker/sidecar.py` working minimal `/predict`; vLLM upstream images | Smoke scripts only |
 | **observability** | **Complete** — `SPEC.md`, 6× `docs/` + **§10.5 SigNoz** | Dev collector + Jaeger + Langfuse compose; `PROFILE=signoz` sidecar | **Partial** — SigNoz dashboard stubs, `otel-collector-config.signoz.yaml`, `signoz-rules.yaml` | No `otel-collector-config.prod.yaml` (OBS-P1) |
@@ -179,12 +179,15 @@ flowchart LR
 | `query/app/auth.py`, `token_store.py`, `session_store.py` | Implemented | MCP tokens + JWT bridge + tenant binding |
 | `query/benchmarks/benchmark_rag.py` | Implemented | §13.2.1 CLI |
 | `ingest/app/migrate.py` | Implemented | Migration runner §4.4.4 |
+| `ingest/app/parsers/` | Implemented v0.32 | Router + text/md/html/json/csv/yaml/pdf/docx/docling (stub tier) |
+| `ingest/app/pipeline.py`, `chunk_builder.py` | Implemented v0.32 | File → `chunk_payload.v1` |
+| `ingest/app/orchestrator.py` | Partial v0.32 | `POST /admin/ingest/document` wired; collection/jobs stub |
 
 #### Not yet on disk (normative refs exist)
 
 | Artifact | Spec / doc reference |
 |----------|---------------------|
-| `ingest/tests/` | `docs/TESTING.md`, FR-33/34 |
+| `ingest/tests/` | `docs/TESTING.md`, FR-33/34 | **Partial v0.32** — parser + chunk schema contract tests |
 | Catalog MCP tools (`list_indexed_documents`, etc.) | **Done v0.30** — `catalog_store.py`, ACL §9.4.2 |
 | `query/app/circuit_breaker.py` | Implemented | FR-28 breakers + §6.3.2 degrade ladder |
 | `query/app/client_factory.py` | Implemented | Guarded client calls + breaker registry |
@@ -201,7 +204,7 @@ Until release train `rag-v1.0`, stub services **MUST** be identifiable in respon
 | **Health checks** | Stub `/healthz` MAY return `research_ready: true` with all `checks.*_ok: true` **only when** `STUB_HEALTH=true` (dev default); production **MUST** probe live deps (FR-06) |
 | **Response bodies** | Stub pipeline responses **SHOULD** include `"stub": true` (already in `rag_graph` abstain/answer paths) |
 | **MCP server identity** | `query/docs/MCP.md` `version: 1.0.0` is **protocol contract version**; FastAPI app version is **build version** — both documented in §7.2 |
-| **Admin routes** | Ingest orchestrator returns `"stub": true` on admin JSON until E-16 implemented |
+| **Admin routes** | Ingest `POST /admin/ingest/document` returns `"stub": false`; collection/job status still stub |
 | **Code comments** | `# Stub:` or docstring **Stub:** naming replacement module (TL-13) |
 
 **Migration:** When LG-1–LG-3 land, remove optimistic health defaults and enforce 503 on degraded path before `rag-v1.0` tag.
