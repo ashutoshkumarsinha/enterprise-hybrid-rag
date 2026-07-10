@@ -41,6 +41,9 @@ class Settings:
     catalog_dsn_token: str | None = None
     catalog_dsn_session: str | None = None
     stub_health: bool = True
+    skip_supervisor_when_explicit: bool = True
+    supervisor_enabled: bool = True
+    history_aware_supervisor: bool = False
 
     oidc_issuer: str | None = None
     jwks_uri: str | None = None
@@ -88,6 +91,9 @@ def get_settings() -> Settings:
         catalog_dsn_token=os.environ.get("CATALOG_DSN_TOKEN"),
         catalog_dsn_session=os.environ.get("CATALOG_DSN_SESSION"),
         stub_health=_env_bool("STUB_HEALTH", True),
+        skip_supervisor_when_explicit=_env_bool("SKIP_SUPERVISOR_WHEN_EXPLICIT", True),
+        supervisor_enabled=_env_bool("SUPERVISOR_ENABLED", True),
+        history_aware_supervisor=_env_bool("HISTORY_AWARE_SUPERVISOR", False),
         oidc_issuer=os.environ.get("OIDC_ISSUER"),
         jwks_uri=os.environ.get("JWKS_URI"),
         jwt_audience=os.environ.get("JWT_AUDIENCE"),

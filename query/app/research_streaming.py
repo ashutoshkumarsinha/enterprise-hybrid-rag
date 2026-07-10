@@ -46,7 +46,7 @@ def state_from_request(
         document_id=body.get("document_id"),
         version_id=body.get("version_id"),
         explicit_scope=explicit,
-        skip_supervisor=explicit,
+        skip_supervisor=explicit and settings.skip_supervisor_when_explicit,
         request_id=body.get("request_id"),
         langfuse_session_id=body.get("langfuse_session_id") or session_id,
         langfuse_trace_id=body.get("langfuse_trace_id"),

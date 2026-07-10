@@ -31,6 +31,8 @@ def cache_key(state: dict[str, Any]) -> str:
         state.get("version_id") or "",
         state.get("query", ""),
     ]
+    if os.environ.get("HISTORY_AWARE_SUPERVISOR", "").lower() in ("true", "1", "yes"):
+        parts.append(state.get("session_id") or "")
     digest = hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()
     return f"qcache:{digest}"
 

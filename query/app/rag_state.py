@@ -80,6 +80,9 @@ class RAGState(TypedDict, total=False):
     skip_supervisor: bool
     graph_enrich_enabled: bool
     degradation_level: str | None
+    original_query: str | None
+    inference_score: float | None
+    visual_intent: bool
 
     # Observability
     timings_ms: dict[str, int]

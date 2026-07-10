@@ -49,12 +49,22 @@ class ChatClient:
     def complete(self, state: dict) -> tuple[str, bool]:
         """Return (answer_text, is_stub)."""
         messages = build_chat_messages(state)
+        return self.complete_messages(messages, max_tokens=self.max_tokens)
+
+    def complete_messages(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        max_tokens: int | None = None,
+    ) -> tuple[str, bool]:
+        """Blocking chat completion for arbitrary message lists (supervisor, etc.)."""
         if self._stub:
-            return _stub_answer(messages), True
+            user = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
+            return _stub_answer([{"role": "user", "content": user}]), True
         payload = {
             "model": self.model,
             "messages": messages,
-            "max_tokens": self.max_tokens,
+            "max_tokens": max_tokens or self.max_tokens,
             "stream": False,
         }
         with httpx.Client(timeout=self.timeout_s) as client:

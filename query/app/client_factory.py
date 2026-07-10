@@ -126,6 +126,18 @@ def complete_answer(state: dict[str, Any]) -> tuple[str, bool]:
     return run_guarded(get_breakers()["chat"], lambda: client.complete(state))
 
 
+def supervise_query(state: dict[str, Any]) -> dict[str, Any]:
+    from app.supervisor import should_run_supervisor, supervise_query as _supervise
+
+    if not should_run_supervisor(state):
+        return {}
+    client = get_chat_client()
+    try:
+        return run_guarded(get_breakers()["chat"], lambda: _supervise(state, client))
+    except CircuitOpenError:
+        return {}
+
+
 def enrich_graph_blocks(state: dict[str, Any]) -> list[str]:
     from app.graph_enrich import enrich_context_blocks
 
@@ -163,4 +175,5 @@ __all__ = [
     "reset_clients",
     "rerank_chunks",
     "retrieve_chunks",
+    "supervise_query",
 ]

@@ -57,7 +57,7 @@ async def handle_research_documents(
         document_id=args.get("document_id"),
         version_id=args.get("version_id"),
         explicit_scope=explicit,
-        skip_supervisor=explicit,
+        skip_supervisor=explicit and settings.skip_supervisor_when_explicit,
         request_id=args.get("request_id"),
         langfuse_session_id=args.get("langfuse_session_id") or session_id,
         langfuse_trace_id=args.get("langfuse_trace_id"),

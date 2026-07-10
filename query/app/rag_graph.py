@@ -4,8 +4,7 @@ This module compiles the query-plane StateGraph described in
 ENTERPRISE_HYBRID_RAG_SPEC.md §6.1. Each ``node_*`` function is one stage;
 conditional edges handle cache hits and abstention without a separate router node.
 
-Current status: **embed, Qdrant, reranker, chat, query cache, and Neo4j graph enrich wired**;
-supervisor LLM remains pass-through. Answer uses vLLM when ``CHAT_STUB=false``.
+Current status: **full pipeline wired** including supervisor LLM, circuit breakers, and degrade ladder.
 
 Spec: §6.1 stage graph · FR-08 abstention · FR-09 timings_ms · FR-13 single embed.
 """
@@ -26,6 +25,7 @@ from app.client_factory import (
     get_reranker_client,
     rerank_chunks,
     retrieve_chunks,
+    supervise_query,
 )
 from app.langsmith_config import setup_langsmith
 from app.query_cache import get_cached_answer, set_cached_answer
@@ -64,16 +64,20 @@ def node_check_cache(state: RAGState) -> dict:
 def node_supervisor(state: RAGState) -> dict:
     """Optionally rewrite the user query before embedding (supervisor LLM).
 
-    Reads: ``query``, ``skip_supervisor``, ``explicit_scope``.
-    Writes: ``timings_ms.supervisor`` (query text unchanged in stub).
+    Reads: ``query``, ``skip_supervisor``, ``explicit_scope``, ``conversation_history``.
+    Writes: ``query``, optional scope pins, ``scope_source``, ``timings_ms.supervisor``.
 
-    Skipped when the client sent explicit scope pins or ``skip_supervisor`` is set.
+    Skipped when scope is explicit, supervisor disabled, or chat circuit is open.
     """
     start = time.perf_counter()
-    if state.get("skip_supervisor") or state.get("explicit_scope"):
-        return _tick(state, "supervisor", start)
-    # Stub: optional LLM rewrite — pass through query until inference client exists.
-    return _tick(state, "supervisor", start)
+    updates = supervise_query(state)
+    tick = _tick(state, "supervisor", start)
+    if not updates:
+        return tick
+    merged = {**tick, **updates}
+    if updates.get("collection_id") or updates.get("document_id"):
+        merged.setdefault("scope_source", "inferred")
+    return merged
 
 
 def node_embed(state: RAGState) -> dict:
@@ -108,7 +112,10 @@ def node_scope(state: RAGState) -> dict:
     Full algorithm: ENTERPRISE_HYBRID_RAG_SPEC.md §6.7.
     """
     start = time.perf_counter()
-    source = "explicit" if state.get("explicit_scope") else "inferred"
+    if state.get("scope_source"):
+        source = state["scope_source"]
+    else:
+        source = "explicit" if state.get("explicit_scope") else "inferred"
     return {**_tick(state, "scope", start), "scope_source": source}
 
 
