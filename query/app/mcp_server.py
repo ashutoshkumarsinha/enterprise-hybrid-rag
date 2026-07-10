@@ -48,11 +48,13 @@ setup_langsmith()
 @app.get("/healthz")
 def healthz() -> dict:
     settings = get_settings()
-    from app.client_factory import get_embed_client, get_qdrant_client
+    from app.client_factory import get_chat_client, get_embed_client, get_qdrant_client, get_reranker_client
 
     qdrant_ok = get_qdrant_client().healthcheck()
     embed_ok = get_embed_client().healthcheck()
-    stores_ready = qdrant_ok and embed_ok
+    chat_ok = get_chat_client().healthcheck()
+    reranker_ok = get_reranker_client().healthcheck()
+    stores_ready = qdrant_ok and embed_ok and chat_ok and reranker_ok
     research_ready = stores_ready if not settings.stub_health else True
     status = "ok" if research_ready else "degraded"
     return {
@@ -66,8 +68,9 @@ def healthz() -> dict:
             "qdrant_ok": qdrant_ok,
             "neo4j_ok": settings.stub_health,
             "redis_ok": settings.stub_health,
-            "inference_ok": embed_ok,
+            "inference_ok": embed_ok and chat_ok,
             "catalog_ok": settings.stub_health,
+            "reranker_ok": reranker_ok,
         },
     }
 

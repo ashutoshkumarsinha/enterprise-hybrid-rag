@@ -4,8 +4,8 @@ This module compiles the query-plane StateGraph described in
 ENTERPRISE_HYBRID_RAG_SPEC.md §6.1. Each ``node_*`` function is one stage;
 conditional edges handle cache hits and abstention without a separate router node.
 
-Current status: **embed + Qdrant retrieve wired** via ``app/clients/``; answer/LLM and
-reranker HTTP remain stub until LG-2/LG-3.
+Current status: **embed, Qdrant, reranker, chat, and query cache wired**; Neo4j graph
+enrich remains stub. Answer uses vLLM when ``CHAT_STUB=false``.
 
 Spec: §6.1 stage graph · FR-08 abstention · FR-09 timings_ms · FR-13 single embed.
 """
@@ -18,9 +18,16 @@ from typing import Literal
 
 from langgraph.graph import END, StateGraph
 
-from app.client_factory import get_embed_client, get_qdrant_client
+from app.client_factory import (
+    get_chat_client,
+    get_embed_client,
+    get_qdrant_client,
+    get_reranker_client,
+)
 from app.clients.qdrant import retrieve_for_state
 from app.langsmith_config import setup_langsmith
+from app.query_cache import get_cached_answer, set_cached_answer
+from app.rag_answer import answer_updates
 from app.rag_state import RAGState
 
 # Compiled graph singleton — built once per process to avoid recompilation cost.
@@ -38,21 +45,15 @@ def _tick(state: RAGState, stage: str, start: float) -> dict:
 
 
 def node_check_cache(state: RAGState) -> dict:
-    """Return a cached answer when Redis query cache hits.
-
-    Reads: ``request_id``, existing ``timings_ms``.
-    Writes: ``from_cache``, optional ``answer_text`` / ``sources``, ``timings_ms.cache_hit``.
-
-    Stub: real lookup lives in ``query_cache.py`` (not yet implemented).
-    Controlled by env ``QUERY_CACHE_ENABLED`` for local experiments only.
-    """
+    """Return a cached answer when Redis query cache hits (LG-3)."""
     start = time.perf_counter()
-    enabled = os.environ.get("QUERY_CACHE_ENABLED", "").lower() in ("true", "1", "yes")
-    if enabled and state.get("request_id", "").endswith("cached"):
+    cached = get_cached_answer(state)
+    if cached:
         return {
             "from_cache": True,
-            "answer_text": "Cached stub answer",
-            "sources": [],
+            "answer_text": cached.get("answer_text", ""),
+            "sources": cached.get("sources", []),
+            "stub": cached.get("stub", False),
             **_tick(state, "cache_hit", start),
         }
     return {**_tick(state, "cache_hit", start), "from_cache": False}
@@ -126,11 +127,15 @@ def node_rerank(state: RAGState) -> dict:
     """
     start = time.perf_counter()
     chunks = state.get("retrieved_chunks") or []
-    scores = [float(c.get("score", 0.85)) for c in chunks] or [0.0]
+    query = state.get("query", "")
+    reranker = get_reranker_client()
+    ranked, scores = reranker.rerank(query, chunks)
     min_score = float(os.environ.get("MIN_RERANK_SCORE", "0.0"))
-    abstained = scores[0] < min_score if scores else True
+    top_score = scores[0] if scores else 0.0
+    abstained = top_score < min_score if scores else True
     return {
         **_tick(state, "rerank", start),
+        "retrieved_chunks": ranked,
         "rerank_scores": scores,
         "abstained": abstained,
     }
@@ -157,41 +162,29 @@ def node_answer(state: RAGState) -> dict:
     Reads: ``from_cache``, ``abstained``, ``query``, ``retrieved_chunks``, ``context_blocks``.
     Writes: ``answer_text``, ``sources``, ``timings_ms.answer``, ``stub``.
 
-    Production streams tokens via vLLM; this stub returns a single string for tests.
+    Production streams tokens via vLLM; blocking path uses :func:`app.clients.chat.ChatClient`.
     """
-    start = time.perf_counter()
     if state.get("from_cache"):
-        return _tick(state, "answer", start)
+        return {}
     if state.get("abstained"):
-        text = "I could not find enough relevant content to answer confidently."
-        return {
-            **_tick(state, "answer", start),
-            "answer_text": text,
-            "sources": [],
-            "stub": True,
-        }
-    query = state.get("query", "")
-    qdrant = get_qdrant_client()
-    embed = get_embed_client()
-    using_stub = qdrant.is_stub or embed.is_stub
-    text = f"Stub grounded answer for: {query[:200]}"
-    sources = []
-    for chunk in state.get("retrieved_chunks") or []:
-        sources.append(
-            {
-                "label": chunk.get("label")
-                or f"{chunk.get('collection_id', '')} / {chunk.get('document_id', '')}",
-                "document_id": chunk.get("document_id"),
-                "collection_id": chunk.get("collection_id"),
-                "score": chunk.get("score"),
-            }
+        return answer_updates(
+            state,
+            "I could not find enough relevant content to answer confidently.",
+            stub=True,
         )
-    return {
-        **_tick(state, "answer", start),
-        "answer_text": text,
-        "sources": sources,
-        "stub": using_stub,
-    }
+    chat = get_chat_client()
+    text, is_stub = chat.complete(state)
+    updates = answer_updates(state, text, stub=is_stub)
+    if not state.get("from_cache"):
+        set_cached_answer(
+            state,
+            {
+                "answer_text": updates["answer_text"],
+                "sources": updates["sources"],
+                "stub": updates.get("stub", is_stub),
+            },
+        )
+    return updates
 
 
 def _route_after_cache(state: RAGState) -> Literal["answer", "supervisor"]:

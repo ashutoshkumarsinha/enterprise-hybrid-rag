@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import AsyncIterator
 from typing import Any
 
+from app.client_factory import get_chat_client
 from app.models import AuthContext
 from app.mcp_format import format_research_markdown
-from app.rag_graph import run_rag_pipeline
+from app.query_cache import set_cached_answer
+from app.rag_answer import answer_updates
+from app.rag_graph import node_answer
+from app.rag_runner import advance_to_answer
 from app.rag_state import RAGState
 from app.session_store import SessionStore
 from app.settings import get_settings
@@ -57,6 +62,21 @@ def _telemetry_markdown(state: RAGState) -> str:
     return format_research_markdown(state).split("---\n", 1)[-1].strip()
 
 
+def _merge_state(state: RAGState, updates: dict[str, Any]) -> RAGState:
+    merged = dict(state)
+    merged.update(updates)
+    return merged  # type: ignore[return-value]
+
+
+async def _yield_answer_tokens(answer: str) -> AsyncIterator[str]:
+    if not answer:
+        return
+    words = answer.split(" ")
+    for i, word in enumerate(words):
+        chunk = word if i == 0 else f" {word}"
+        yield f"data: {json.dumps({'type': 'token', 'text': chunk})}\n\n"
+
+
 async def stream_research_events(
     body: dict[str, Any],
     *,
@@ -66,14 +86,38 @@ async def stream_research_events(
     """Yield SSE ``data:`` lines per platform contract §7.9."""
     settings = get_settings()
     state = state_from_request(body, ctx=ctx, session_store=session_store)
-    final = await run_rag_pipeline(state)
-    answer = final.get("answer_text", "")
+    preflight = advance_to_answer(state)
 
-    if answer:
-        words = answer.split(" ")
-        for i, word in enumerate(words):
-            chunk = word if i == 0 else f" {word}"
-            yield f"data: {json.dumps({'type': 'token', 'text': chunk})}\n\n"
+    if preflight.get("from_cache"):
+        final = preflight
+        async for event in _yield_answer_tokens(final.get("answer_text", "")):
+            yield event
+    elif preflight.get("abstained"):
+        final = _merge_state(preflight, node_answer(preflight))
+        async for event in _yield_answer_tokens(final.get("answer_text", "")):
+            yield event
+    else:
+        chat = get_chat_client()
+        parts: list[str] = []
+        stream_start = time.perf_counter()
+        async for token in chat.stream_tokens(preflight):
+            parts.append(token)
+            yield f"data: {json.dumps({'type': 'token', 'text': token})}\n\n"
+        timings = dict(preflight.get("timings_ms") or {})
+        timings["answer"] = int((time.perf_counter() - stream_start) * 1000)
+        preflight = _merge_state(preflight, {"timings_ms": timings})
+        final = _merge_state(
+            preflight,
+            answer_updates(preflight, "".join(parts), stub=chat.is_stub),
+        )
+        set_cached_answer(
+            state,
+            {
+                "answer_text": final.get("answer_text", ""),
+                "sources": final.get("sources", []),
+                "stub": final.get("stub", chat.is_stub),
+            },
+        )
 
     sources = final.get("sources") or []
     sources_md = "\n".join(
