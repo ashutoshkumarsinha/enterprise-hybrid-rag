@@ -13,7 +13,7 @@ from app.pipeline import parse_document
 from app.tasks import batch_write
 from app.telemetry import get_tracer, setup_otel
 
-app = FastAPI(title="hybrid-rag-ingest-orchestrator", version="0.2.0-parsers")
+app = FastAPI(title="hybrid-rag-ingest-orchestrator", version="0.3.0-writers")
 setup_otel(app)
 tracer = get_tracer()
 
