@@ -216,7 +216,7 @@ logs: ## Show how to tail logs per plane (use infra-logs, query-logs, …)
 # Code quality (§23, docs/CODING_STANDARDS.md)
 # ---------------------------------------------------------------------------
 
-.PHONY: lint format test test-unit test-contract
+.PHONY: lint format test test-unit test-contract test-pr test-nightly benchmark-pr
 lint: ## Ruff + Black check on application Python
 	@command -v ruff >/dev/null 2>&1 || { echo "Install: pip install ruff black"; exit 1; }
 	@command -v black >/dev/null 2>&1 || { echo "Install: pip install ruff black"; exit 1; }
@@ -228,6 +228,22 @@ format: ## Auto-format Python with Black
 	black $(PYTHON_APP_DIRS)
 
 test: test-unit test-contract ## Run all pytest suites that exist
+
+test-pr: ## PR gate — unit + contract (query + ingest)
+	@chmod +x scripts/ci-pr.sh 2>/dev/null || true
+	@./scripts/ci-pr.sh
+
+benchmark-pr: ## Stub golden-set benchmark with warn thresholds (PR tier)
+	@cd $(QUERY_DIR) && PY=$$( [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3 ); \
+	$$PY benchmarks/benchmark_rag.py \
+		--limit 4 \
+		--golden-set benchmarks/golden_set.json.example \
+		--output benchmarks/last_run_ci.json \
+		--warn-total-p95-ms 45000
+
+test-nightly: ## Nightly gate — PR suite + integration + benchmark + compare
+	@chmod +x scripts/ci-nightly.sh scripts/ci-pr.sh 2>/dev/null || true
+	@./scripts/ci-nightly.sh
 
 test-unit: ## pytest tests/unit in query and ingest (if present)
 	@status=0; \

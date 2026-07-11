@@ -135,12 +135,17 @@ def _check_thresholds(
         failures.append(f"total p95 {total_p95}ms > fail {args.fail_total_p95_ms}ms")
     if ragas and "scores" in ragas:
         scores = ragas["scores"]
-        checks = [
+        fail_checks = [
             ("faithfulness", args.fail_faithfulness),
             ("answer_relevancy", args.fail_answer_relevancy),
             ("context_recall", args.fail_context_recall),
         ]
-        for key, threshold in checks:
+        warn_checks = [
+            ("faithfulness", args.warn_faithfulness),
+            ("answer_relevancy", args.warn_answer_relevancy),
+            ("context_recall", args.warn_context_recall),
+        ]
+        for key, threshold in fail_checks:
             if threshold is None:
                 continue
             value = scores.get(key)
@@ -148,6 +153,14 @@ def _check_thresholds(
                 continue
             if value < threshold:
                 failures.append(f"{key} {value:.3f} < {threshold}")
+        for key, threshold in warn_checks:
+            if threshold is None:
+                continue
+            value = scores.get(key)
+            if value is None:
+                continue
+            if value < threshold:
+                warnings.append(f"{key} {value:.3f} < warn {threshold}")
     return warnings, failures
 
 
@@ -168,6 +181,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--fail-faithfulness", type=float, default=None)
     parser.add_argument("--fail-answer-relevancy", type=float, default=None)
     parser.add_argument("--fail-context-recall", type=float, default=None)
+    parser.add_argument("--warn-faithfulness", type=float, default=None)
+    parser.add_argument("--warn-answer-relevancy", type=float, default=None)
+    parser.add_argument("--warn-context-recall", type=float, default=None)
     parser.add_argument("--fail-total-p95-ms", type=int, default=None)
     parser.add_argument("--warn-total-p95-ms", type=int, default=None)
     parser.add_argument("--compare-otel", action="store_true", help="OBS-P3 placeholder")

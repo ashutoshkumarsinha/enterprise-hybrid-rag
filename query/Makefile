@@ -4,7 +4,7 @@ REGISTRY ?=
 PUSH     ?= false
 PACKER_ARGS := -var "image_tag=$(IMAGE_TAG)" -var "registry=$(REGISTRY)" -var "push=$(PUSH)"
 
-.PHONY: network up down health logs build lint format integration packer-init packer-validate packer-build
+.PHONY: network up down health logs build lint format integration benchmark benchmark-nightly packer-init packer-validate packer-build
 
 network:
 	docker network inspect hybrid-rag-net >/dev/null 2>&1 || docker network create hybrid-rag-net
@@ -33,6 +33,14 @@ format:
 
 benchmark: ## Run golden-set benchmark (stub mode default)
 	@python benchmarks/benchmark_rag.py --limit 4 --golden-set benchmarks/golden_set.json.example
+
+benchmark-nightly: ## Nightly benchmark + Ragas + baseline compare
+	@python benchmarks/benchmark_rag.py --limit 10 --ragas --warn-total-p95-ms 45000 --warn-faithfulness 0.80
+	@if [ -f benchmarks/baselines.json ]; then \
+		python benchmarks/compare_benchmark_run.py benchmarks/last_run.json benchmarks/baselines.json; \
+	else \
+		echo "SKIP compare: benchmarks/baselines.json not present"; \
+	fi
 
 integration: ## Live-stack integration tests (see .env.live.example + scripts/run-integration.sh)
 	@chmod +x scripts/run-integration.sh 2>/dev/null || true

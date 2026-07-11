@@ -23,7 +23,8 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | **Catalog MCP tools** | **Done v0.30** | `catalog_store.py`, ACL filtering |
 | **benchmark_rag.py (LG-4)** | **Implemented** | `query/benchmarks/` |
 | **migrate.py (E-14)** | **Implemented** | `ingest/app/migrate.py` |
-| **Contract tests** | **63 tests passing** | `query/tests/contract/`, `query/tests/unit/` |
+| **Contract tests** | **71 tests passing** | `query/tests/contract/`, `query/tests/unit/` |
+| **GitHub Actions CI** | **Implemented** | `.github/workflows/ci.yml`, `nightly.yml`, `scripts/ci-*.sh` |
 | **Integration tests** | **Implemented** | `query/tests/integration/` (`LIVE_STACK=1`, `.env.live.example`) |
 | **SigNoz APM profile** | **Partial on disk** | §10.5, `observability/docs/SIGNOZ.md` |
 | **Postgres query roles** | **Init script + grants** | `postgres-init.sh`, `004_*`, `infra/docs/POSTGRES.md` |
@@ -83,7 +84,7 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | LG-1 | Real Qdrant hybrid retrieve node | query | **Done v0.28** — `clients/qdrant.py` |
 | LG-2 | vLLM embed + chat streaming in answer node | query | **Done v0.28** — `clients/chat.py`, streaming |
 | LG-3 | Redis query cache node | query | **Done v0.28** — `query_cache.py` |
-| LG-4 | LangSmith + **Ragas** eval from golden set | query | **Partial** — `benchmark_rag.py`; Ragas gate pending |
+| LG-4 | LangSmith + **Ragas** eval from golden set | query | **Done v0.43** — `benchmark_rag.py --ragas` + nightly CI gate |
 | LG-5 | Celery task spans in LangSmith (optional) | ingest | `@traceable` on `batch_write` |
 | LG-6 | MCP conversation session store | query | **Done v0.28** — `session_store.py` + tools |
 

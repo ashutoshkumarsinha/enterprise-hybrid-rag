@@ -116,10 +116,15 @@ Platform contract tests listed in [SHARED_CONTRACTS.md](../modules/SHARED_CONTRA
 
 ```bash
 # Every PR — unit + contract (no GPU)
+make test-pr
+# or per sub-project:
 cd query && pytest tests/unit tests/contract -q
 cd ingest && pytest tests/unit tests/contract -q
+make benchmark-pr
 
-# Nightly — integration + eval
+# Nightly — integration + eval (GitHub Actions: .github/workflows/nightly.yml)
+make test-nightly
+# or manually:
 LIVE_STACK=1 pytest tests/integration -q   # query + ingest
 make test-integration
 python query/benchmarks/benchmark_rag.py --limit 20 --ragas
