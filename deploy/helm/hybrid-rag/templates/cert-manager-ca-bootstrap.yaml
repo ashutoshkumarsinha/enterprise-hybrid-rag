@@ -1,0 +1,39 @@
+{{- if .Values.certManager.ca.bootstrap }}
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "hybrid-rag.fullname" . }}-selfsigned
+  labels:
+    {{- include "hybrid-rag.labels" . | nindent 4 }}
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "hybrid-rag.fullname" . }}-ca
+  labels:
+    {{- include "hybrid-rag.labels" . | nindent 4 }}
+spec:
+  isCA: true
+  commonName: hybrid-rag-ca
+  secretName: {{ .Values.query.mtls.caSecret }}
+  duration: 87600h
+  renewBefore: 720h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: {{ include "hybrid-rag.fullname" . }}-selfsigned
+    kind: Issuer
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "hybrid-rag.fullname" . }}-ca
+  labels:
+    {{- include "hybrid-rag.labels" . | nindent 4 }}
+spec:
+  ca:
+    secretName: {{ .Values.query.mtls.caSecret }}
+{{- end }}

@@ -1,0 +1,8 @@
+# ClusterIssuer backed by hybrid-rag-root-ca — signs leaf certs for ingress/query mTLS.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: hybrid-rag-ca
+spec:
+  ca:
+    secretName: hybrid-rag-root-ca

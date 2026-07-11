@@ -10,7 +10,7 @@
 
 Deploy and operate the **ingestion plane** for Enterprise Hybrid RAG:
 
-- Source connectors (filesystem, S3, SharePoint, Confluence, …)
+- Source connectors (filesystem, S3, …)
 - Parse, chunk, enrich (deferred VLM)
 - Batch embed (dense + sparse) via inference sub-project
 - Parsers: **PyMuPDF** fast path + **Docling** quality tier (TL-10)

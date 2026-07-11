@@ -33,6 +33,7 @@ from app.session_store import create_session_store
 from app.settings import get_settings
 from app.telemetry import SPAN_HTTP_RESEARCH_STREAM, SPAN_MCP_SSE_CONNECT, get_tracer, start_span, setup_otel
 from app.token_store import create_token_store
+from app.tls_config import mtls_enabled
 from app.warmup_clients import warmup_clients
 
 MCP_NAME = os.environ.get("MCP_NAME", "enterprise-hybrid-rag")
@@ -107,6 +108,7 @@ def healthz():
         },
         "circuit_breakers": breaker_snapshots(),
         "metrics": metrics_snapshot(),
+        "mtls_enabled": mtls_enabled(),
     }
     if not research_ready:
         return JSONResponse(status_code=503, content=body)
@@ -163,6 +165,9 @@ async def mcp_research_documents(
 ) -> dict[str, Any]:
     assert_query_admission(ctx)
     body = await request.json()
+    token = request.headers.get("X-Federated-Service-Token")
+    if token:
+        body = {**body, "_federated_service_token": token}
     return await handle_research_documents(
         body,
         ctx=ctx,

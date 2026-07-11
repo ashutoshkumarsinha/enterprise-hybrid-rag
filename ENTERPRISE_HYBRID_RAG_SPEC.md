@@ -21,7 +21,7 @@ This specification defines an **enterprise-grade Hybrid RAG platform** that inge
 | Domain catalog tool | `list_indexed_documents` |
 | Domain graph viz tool | `visualize_document_graph` |
 | Qdrant + Neo4j + Redis + MinIO | Same store topology; tenant-aware naming |
-| Celery batch ingest | Same; plus connector framework (S3/SharePoint/Confluence) |
+| Celery batch ingest | Same; plus connector framework (S3, filesystem) |
 | Langfuse + OTel/Jaeger | Unified observability stack in `observability/` sub-project |
 | React BFF + Keycloak + MCP multiplexer | Same; RBAC extended to collections |
 
@@ -124,44 +124,37 @@ Cross-language coupling remains **HTTP + shared contracts** (§3.3, §4) — nev
 
 ### 1.4 Implementation inventory (repository reality)
 
-> **Phase:** Specification-first monorepo with **compose scaffolds**, **catalog migrations 001–004**, **JSON schemas**, and **v0.28 query implementation** (auth, MCP tools, LangGraph clients). Ingest handlers and rag-v1.0 production gates remain partial (§22).
+> **Phase:** **rag-v1.0 release train** — P0–P3 roadmap complete; contract gates green via `make validate-rag-v1`. Live-stack cutover (health, migrate, Ragas, soak) remains operator checklist §4 in `docs/SPEC_ROADMAP.md`.
 
 ```mermaid
 flowchart LR
-    subgraph strong["Specified + documented"]
-        DOCS[docs/ audience guides]
-        SPEC[5× SPEC.md + integration docs]
-        COMP[compose + Makefiles]
+    subgraph shipped["Shipped on disk"]
+        QUERY[query LangGraph + MCP + federation + mTLS]
+        INGEST[ingest parsers + connectors + quotas]
+        INFRA[infra stores + Caddy mTLS + migrations 001–005]
+        OBS[observability OTel + SigNoz + alerts]
+        DEPLOY[chat-ui + helm + validate-rag-v1 gate]
     end
 
-    subgraph partial["Partial on disk"]
-        INFRA[infra scripts init-db minio keycloak postgres roles]
-        MIG[ingest/migrations/ 001–004]
-        SCHEMAS[modules/schemas/ 11 contracts]
-        BENCH[benchmark_rag.py + k6 Locust golden_set]
-        RERANK[inference reranker sidecar]
-        QUERY[query auth MCP clients cache]
+    subgraph live["Operator / live stack"]
+        HEALTH[make health + migrate]
+        PERF[Ragas + k6 soak]
+        PROD[prod secrets + quotas]
     end
 
-    subgraph stub["Stub / missing"]
-        INGEST[ingest parsers + admin API]
-        GRAPH[catalog tools + circuit breakers]
-        PROD[prod health gates + circuit breakers]
-    end
-
-    strong --> partial --> stub
+    shipped --> live
 ```
 
 #### Sub-project status
 
 | Sub-project | Docs | Compose / ops | Application code | Tests / schemas |
 |-------------|------|---------------|------------------|-----------------|
-| **query** | **Complete** — `SPEC.md`, 9× `docs/` (incl. RBAC, SESSIONS, TOKEN_ADMIN, MCP stdio) | `compose/`, `Makefile`, `Dockerfile` | **rag-v1.0 candidate** — full LangGraph path + supervisor + breakers + events + ACL cache | **80 contract/unit tests** |
-| **ingest** | **Complete** — `SPEC.md`, 7× `docs/` (incl. MIGRATIONS) | `compose/`, worker `Dockerfile` | **v0.49** — ingest plane + quotas (FR-30) | **56 contract/unit tests**; migrations 001–004 |
-| **infra** | **Complete** — `SPEC.md`, 9× `docs/` | Full store compose; Qdrant gRPC **6334** | **Partial** — `init-db.sh`, `init-minio.sh`, `postgres-init.sh` (4 catalog roles), `healthcheck.sh`, `backup.sh`, `render_caddyfile.py`, `hybrid-rag-realm.json` | No `postgres-catalog-indexes.sql` (INF-P2) |
-| **inference** | **Complete** — `SPEC.md`, 7× `docs/` | vLLM `v0.6.6` compose profiles | **Partial** — `reranker/sidecar.py` working minimal `/predict`; vLLM upstream images | Smoke scripts only |
-| **observability** | **Complete** — `SPEC.md`, 6× `docs/` + **§10.5 SigNoz** | Dev collector + Jaeger + Langfuse compose; `PROFILE=signoz` sidecar | **Partial** — SigNoz dashboard stubs, `otel-collector-config.signoz.yaml`, `signoz-rules.yaml` | No `otel-collector-config.prod.yaml` (OBS-P1) |
-| **mod-kernel** | **Normative** — `SHARED_CONTRACTS.md` | N/A (no runtime) | **11 JSON schemas** in `modules/schemas/` §4.7 | Contract tests in `query/tests/contract/` |
+| **query** | **Complete** | `compose/`, `Makefile`, `Dockerfile` | **rag-v1.0** — LangGraph, federation, mTLS listener, breakers | **130+ unit/contract tests** |
+| **ingest** | **Complete** | `compose/`, worker `Dockerfile` | **v0.49+** — parsers, connectors (S3/filesystem), quotas, OTel | **175+ unit/contract tests**; migrations **001–005** |
+| **infra** | **Complete** | Full store compose; Qdrant gRPC **6334** | `init-db.sh`, `postgres-init.sh`, Caddy mTLS render, Keycloak realm | Contract tests + `make health` |
+| **inference** | **Complete** | vLLM compose profiles | `reranker/sidecar.py`; upstream vLLM images | Smoke + benchmark hooks |
+| **observability** | **Complete** | Dev + prod collector, Jaeger, SigNoz | FR-40 metrics query+ingest; dashboards + Prometheus rules | Contract tests |
+| **mod-kernel** | **Normative** | N/A | **11 JSON schemas** + `SHARED_CONTRACTS.md` | Cross-plane contract suite |
 
 #### Key files on disk (reference)
 
@@ -195,17 +188,15 @@ flowchart LR
 | `ingest/app/catalog_store.py` | Implemented v0.41 | Postgres/in-memory `documents` + `document_versions` on write |
 | `ingest/benchmarks/benchmark_ingest.py` | Implemented v0.44 | Mock + live throughput gates (§13.1) |
 
-#### Not yet on disk (normative refs exist)
+#### Not yet on disk (operator / live only)
 
-| Artifact | Spec / doc reference |
-|----------|---------------------|
-| `ingest/tests/` | **Partial v0.37** — unit/contract + live integration harness |
-| Catalog MCP tools (`list_indexed_documents`, etc.) | **Done v0.30** — `catalog_store.py`, ACL §9.4.2 |
-| `query/app/circuit_breaker.py` | Implemented | FR-28 breakers + §6.3.2 degrade ladder |
-| `query/app/client_factory.py` | Implemented | Guarded client calls + breaker registry |
-| `load_test.py` | **Done v0.48** — http + k6 + Locust wrapper §13.1 |
-| `ingest/benchmarks/benchmark_ingest.py` | Implemented v0.44 | Mock + live throughput gates (§13.1) |
-| `chat-ui/`, `deploy/helm/` | E-18, E-19 |
+| Artifact | Notes |
+|----------|-------|
+| Production secrets + tenant quotas | Out-of-band Helm / vault |
+| Live Ragas + k6 soak gates | `RAGAS_GATE=1` / `LOAD_GATE=1` |
+| Managed store endpoints | `docs/MANAGED_STORES.md` — customer-specific URLs |
+
+`chat-ui/` and `deploy/helm/` **are on disk** (E-18, E-19).
 
 ### 1.5 Stub-phase conventions (pre–rag-v1.0)
 
@@ -684,7 +675,7 @@ flowchart TB
 
 | Layer | Responsibility |
 |-------|----------------|
-| **Connector** | Pull bytes + metadata from source systems (S3, SharePoint, filesystem, Confluence) |
+| **Connector** | Pull bytes + metadata from source systems (S3, filesystem) |
 | **Parse & chunk** | Structure-aware splitting, heading hierarchy |
 | **Enrich** | VLM captions, table extraction, link mining |
 | **Index** | Embed, upsert Qdrant, MERGE Neo4j, dedup |
@@ -753,7 +744,7 @@ All retrieval filters MUST be expressible as Qdrant payload indexes.
 | `language` | string | no | ISO 639-1 |
 | `tags` | string[] | no | User or ingest tags |
 | `source_uri` | string | no | Original URL/path |
-| `source_system` | string | no | `sharepoint`, `s3`, `filesystem` |
+| `source_system` | string | no | `s3`, `filesystem` |
 | `acl_principal` | string[] | no | Allowed groups/users |
 | `references` | string[] | no | Mined links to other `document_id`s |
 | `image_url` | string | no | Object store URL |
@@ -954,7 +945,7 @@ parser: docling   # per collection in ingest manifest
 | **Full** | Re-index collection; new `version_id` |
 | **Incremental** | File registry detects new/changed paths by hash |
 | **Single document** | API: `POST /admin/ingest/document` |
-| **Connector sync** | Scheduled S3, SharePoint, Google Drive, Confluence |
+| **Connector sync** | Scheduled S3 / MinIO |
 
 ### 5.3 Pipeline stages
 
@@ -1075,9 +1066,6 @@ class Connector(Protocol):
 |-----------|-----|------|-------|
 | Filesystem | yes | OS perms | Dev + air-gapped |
 | S3 / MinIO | P2 | IAM keys | Prefix per collection |
-| SharePoint | P2 | OAuth app | Delta sync via `since` |
-| Confluence | P3 | API token | Page tree → documents |
-| Google Drive | P3 | OAuth | Shared drives supported |
 
 Scheduled sync: cron or Celery beat; `connector_sync_interval_minutes` per collection.
 
@@ -3248,7 +3236,7 @@ flowchart LR
 | **P2.6** | query + ingest | Benchmark harness + CI regression gates |
 | **P3** | query + infra | Multi-tenant hardening; OIDC JWT on MCP (FR-23) |
 | **P4** | infra + query | K8s Helm; MCP HPA; retention job |
-| **P5** | ingest + query | Confluence/Drive; cross-collection queries |
+| **P5** | ingest + query | Cross-collection queries; federation |
 
 ---
 
@@ -3782,85 +3770,38 @@ flowchart TB
     HYGIENE --> MIGRATE
 ```
 
-### 22.1 P0 — Contract completeness
+### 22.1 Implementation status (rag-v1.0 — 2026-07-11)
 
-| ID | Status v0.27 | Still required |
-|----|--------------|----------------|
-| **E-01** | **Partial** — §9.2, realm JSON, token admin API spec | `query/app/auth.py`, `token_store.py` |
-| **E-02** | **Done** — §12.5.1 health matrix + `make health` | — |
-| **E-03** | Partial — §12.6 matrix | Single cross-plane doc export |
-| **E-04** | Partial — §12.7 + packer README | `versions.pkrvars.hcl` field glossary table |
-| **E-05** | **Done** — §7.10.1 auth decision tree + token-first flow | — |
-| **E-06** | **Done** — §10.4 OTel span catalog | Wire spans in code |
+| Track | Status | Gate |
+|-------|--------|------|
+| **P0** contract completeness (E-01–E-43) | **Done** | `make validate-release-matrix` |
+| **P1** depth (E-14–E-19) | **Done** | `make validate-p1` |
+| **P1.5** LangGraph LG-1–LG-6 | **Done** | query unit + contract |
+| **P1.6** INF-P1–P4, OBS-P1–P5 | **Done** | infra/obs contract tests |
+| **P2** enterprise hardening (E-21–E-44, E-34, E-24, E-25) | **Done** | `make validate-p2` |
+| **P3** advanced product (E-30–E-33) | **Done** | `make validate-p3` |
+| **Post-P3** federation research, query quota suffix, mTLS listener | **Done** | `test_federated_research.py`, `test_mtls_config.py` |
+| **rag-v1.0 CI gate** | **Done** | `make validate-rag-v1` |
+| **Live cutover** | Operator | `make health`, `make migrate`, `RAGAS_GATE=1`, `LOAD_GATE=1` |
 
-### 22.2 P1 — Implementation-ready normative depth
+### 22.2 Open questions (resolved)
 
-| ID | Status v0.27 | Still required |
-|----|--------------|----------------|
-| **E-14** | **Partial** — migrations `001`–`004`, runner spec §4.4.4 | `ingest/app/migrate.py`, `make migrate` |
-| **E-15** | **Partial** — 10 JSON schemas + README | Contract test files in `query/tests/contract/` |
-| **E-16** | Prose — `ADMIN_API.md` | Live ingest handlers + OpenAPI |
-| **E-17** | Prose — `CONNECTORS.md` | S3 connector code |
-| **E-18** | §8 summary | `chat-ui/` |
-| **E-19** | — | `deploy/helm/` |
-| **E-40** | **Done v0.27** — `query/docs/TOKEN_ADMIN.md` | HTTP handlers |
-| **E-41** | **Done v0.27** — `mcp_access_token_mint.*.v1.json` | Validate in `token_store.py` |
-| **E-42** | **Done v0.27** — `postgres-init.sh` roles + `004_*` grants | Wire DSNs in query compose |
-| **E-43** | **Done v0.27** — `ingest/docs/MIGRATIONS.md` | `migrate.py` implementation |
-
-### 22.3 P1.5 — LangGraph stub → production
-
-| ID | Status v0.27 | Still required |
-|----|--------------|----------------|
-| **LG-1** | Stub node | `clients/qdrant.py` + tests |
-| **LG-2** | Env only | `client_factory.py`, streaming answer |
-| **LG-3** | Stub cache node | `query_cache.py` |
-| **LG-4** | **CLI spec done** §13.2.1 | `benchmark_rag.py` implementation |
-| **LG-5** | Config stub | Celery `@traceable` |
-| **LG-6** | **Spec + DDL done** §7.11 | `session_store.py`, session MCP tools, history in answer node |
-
-### 22.4 MCP and kernel gaps (cross-cutting)
-
-| Gap | On disk today | Implement next |
-|-----|---------------|----------------|
-| MCP tool **I/O JSON Schema** | **10 schemas** in `modules/schemas/` | Remaining session list/update schemas; handlers |
-| **`research_documents` tool** | Schema + HTTP `/research/stream` only | Handler + `session_id` persistence (§7.11) |
-| **Token admin routes** | `TOKEN_ADMIN.md` + mint schemas | FastAPI routes + `token_store.py` |
-| **Session MCP tools** | Spec + DDL + partial schemas | `session_store.py`, handlers |
-| **stdio MCP transport** | §7.1.1 matrix + `MCP_ACCESS_TOKEN` env | `mcp_server.py` stdio entrypoint |
-| **Contract test suite** | Schema files | `query/tests/contract/` implementations |
-| **Parser code** | `ingest/docs/PARSERS.md` | `ingest/app/parsers/*.py` |
-| **`warmup_clients()`** | Documented in `query/SPEC.md` | FR-14 startup hook |
-
-### 22.5 Infra and observability performance (planned → normative)
-
-| ID | On disk today | Spec next |
-|----|---------------|-----------|
-| **INF-P1** | `init-db.sh` without INT8 | Quantization step in init + §18.17 |
-| **INF-P2** | Missing SQL file | `postgres-catalog-indexes.sql` |
-| **INF-P3** | Redis AOF only in compose | `maxmemory` + eviction policy |
-| **INF-P4** | gRPC **6334** in compose | Query client config + `infra/docs/PERFORMANCE.md` |
-| **OBS-P1–P4** | Dev collector; SigNoz overlay on disk | Prod YAML, truncation processor, Jaeger persist profile |
-| **E-23** | **Partial** — §10.5.5 dashboards + `signoz-rules.yaml` stubs | SigNoz API import; wire FR-40 metrics in app |
-
-### 22.6 Open questions to resolve in spec
-
-| ID | Resolve in |
+| ID | Resolution |
 |----|------------|
-| **OQ1** | Managed vs self-hosted stores — Helm values appendix (E-19) |
-| **OQ2** | Embed model migration without full reindex — playbook §4 + E-25 |
-| **OQ3** | Federated MCP — defer v1.1+ (E-32) |
-| **OQ4** | External IdP federation — expand `infra/docs/KEYCLOAK.md` |
-| **OQ5** | **Closed** — token-first MCP auth + optional JWT bridge (§7.10.1, §7.13) | Implement `auth.py` |
+| **OQ1** | `docs/MANAGED_STORES.md` + Helm `stores.mode` |
+| **OQ2** | `docs/EMBED_DIMENSION_MIGRATION.md` + E-25 |
+| **OQ3** | E-32 federated catalog + **federated research merge** (`federated_research.py`) |
+| **OQ4** | `infra/docs/KEYCLOAK.md` §9 external IdP |
+| **OQ5** | **Closed** — token-first MCP + optional JWT bridge |
 
-### 22.7 Suggested v0.28 implementation bundle (rag-v1.0 path)
+### 22.3 Deferred beyond rag-v1.0
 
-1. **E-01 + E-40** — `auth.py`, `rbac.py`, `token_store.py` + `/admin/mcp/tokens` routes  
-2. **LG-6** — `session_store.py` + session MCP tools + `/sessions` HTTP (FR-41–43)  
-3. **MCP `research_documents`** — tool handler with `session_id` append  
-4. **E-14** — `ingest/app/migrate.py` + bootstrap wiring  
-5. **E-15** — `query/tests/contract/` for schemas + MCP I/O  
-6. **LG-1 + LG-4** — `clients/qdrant.py` + `benchmark_rag.py`  
+| Item | Notes |
+|------|-------|
+| Additional SaaS connectors | Out of scope for rag-v1.0; extend `get_connector()` when needed |
+| Cross-region session stickiness | Catalog federation only |
+| Qdrant sharding >5M chunks | INF-P6 scale-out docs |
+| Redis LangGraph checkpointer | LG future |
 
 ### 22.8 TL-12 diagram remediation (docs debt)
 

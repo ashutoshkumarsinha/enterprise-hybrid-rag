@@ -1,0 +1,18 @@
+# Root CA for internal mTLS (query listener + ingress upstream client certs).
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: hybrid-rag-root-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: hybrid-rag-root-ca
+  secretName: hybrid-rag-root-ca
+  duration: 87600h # 10y
+  renewBefore: 720h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: hybrid-rag-selfsigned
+    kind: ClusterIssuer

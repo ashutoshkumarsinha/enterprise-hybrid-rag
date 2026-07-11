@@ -49,6 +49,34 @@ spec:
               value: {{ .Values.query.sessions.maxAgeDays | quote }}
             - name: QUERY_RATE_LIMIT_ENABLED
               value: {{ .Values.query.rateLimit.enabled | quote }}
+            {{- if .Values.query.mtls.enabled }}
+            - name: MCP_MTLS_ENABLED
+              value: "true"
+            - name: MCP_TLS_CERT
+              value: /etc/query/mtls/tls.crt
+            - name: MCP_TLS_KEY
+              value: /etc/query/mtls/tls.key
+            - name: MCP_TLS_CLIENT_CA
+              value: /etc/query/mtls/ca.crt
+            {{- end }}
+          {{- if .Values.query.mtls.enabled }}
+          volumeMounts:
+            - name: query-mtls
+              mountPath: /etc/query/mtls
+              readOnly: true
+          {{- end }}
+          {{- if .Values.query.mtls.enabled }}
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          {{- else }}
           readinessProbe:
             httpGet:
               path: /healthz
@@ -61,8 +89,27 @@ spec:
               port: http
             initialDelaySeconds: 30
             periodSeconds: 30
+          {{- end }}
           resources:
             {{- toYaml .Values.query.resources | nindent 12 }}
+      {{- if .Values.query.mtls.enabled }}
+      volumes:
+        - name: query-mtls
+          projected:
+            sources:
+              - secret:
+                  name: {{ .Values.query.mtls.certSecret }}
+                  items:
+                    - key: tls.crt
+                      path: tls.crt
+                    - key: tls.key
+                      path: tls.key
+              - secret:
+                  name: {{ .Values.query.mtls.caSecret }}
+                  items:
+                    - key: tls.crt
+                      path: ca.crt
+      {{- end }}
 ---
 apiVersion: v1
 kind: Service

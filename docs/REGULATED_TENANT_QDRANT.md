@@ -22,14 +22,14 @@ Suffix rules: lowercase alphanumeric, `_` or `-`, max 63 chars.
 
 ### Catalog (production)
 
-Set via quota admin API after migration 005:
+Set via quota admin API after migration 005 (ingest writes; **query reads via `CATALOG_DSN_RO`**):
 
 ```bash
 PUT /admin/tenants/acme-corp/quotas
 {"qdrant_collection_suffix": "acme"}
 ```
 
-Column: `tenant_quotas.qdrant_collection_suffix`.
+Column: `tenant_quotas.qdrant_collection_suffix`. Query resolves suffix through `query/app/quota_store.py` → `qdrant_collection.tenant_suffix()`.
 
 ### Dev / tests
 

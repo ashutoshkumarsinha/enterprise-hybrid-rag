@@ -10,6 +10,7 @@ from typing import Any
 from app.client_factory import get_breakers, get_chat_client
 from app.circuit_breaker import breakers_enabled
 from app.models import AuthContext
+from app.federated_research import merge_federated_research
 from app.mcp_format import format_research_markdown
 from app.otel_metrics import record_rag_ttft_ms
 from app.query_cache import set_cached_answer
@@ -187,6 +188,8 @@ async def stream_research_events(
                         "stub": final.get("stub", chat.is_stub),
                     },
                 )
+
+    final = await merge_federated_research(final, body, ctx=ctx)
 
     sources = final.get("sources") or []
     sources_md = "\n".join(

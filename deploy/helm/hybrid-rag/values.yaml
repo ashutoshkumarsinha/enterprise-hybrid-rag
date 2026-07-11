@@ -57,6 +57,11 @@ query:
     maxAgeDays: 90
   rateLimit:
     enabled: true
+  mtls:
+    enabled: false
+    certSecret: hybrid-rag-query-mtls
+    caSecret: hybrid-rag-root-ca
+    clientCaSecret: hybrid-rag-root-ca
   existingSecret: hybrid-rag-query-secrets
 
 ingest:
@@ -105,6 +110,32 @@ ingress:
     mcp: /mcp
     researchStream: /research/stream
     chat: /
+
+# cert-manager — production PKI (install controllers via make -C infra cert-manager-install)
+certManager:
+  ca:
+    bootstrap: false
+  certificates:
+    enabled: false
+    renewBefore: 720h
+    ingress:
+      enabled: true
+      issuerRef:
+        kind: ClusterIssuer
+        name: letsencrypt-prod
+      additionalDnsNames: []
+    queryMtls:
+      enabled: false
+      issuerRef:
+        kind: ClusterIssuer
+        name: hybrid-rag-ca
+      additionalDnsNames: []
+    ingressClient:
+      enabled: false
+      secretName: hybrid-rag-ingress-mtls-client
+      issuerRef:
+        kind: ClusterIssuer
+        name: hybrid-rag-ca
 
 cronJobs:
   versionPrune:

@@ -1,0 +1,20 @@
+{{- if and .Values.certManager.certificates.enabled .Values.certManager.certificates.ingressClient.enabled .Values.ingress.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "hybrid-rag.fullname" . }}-ingress-mtls-client
+  labels:
+    {{- include "hybrid-rag.labels" . | nindent 4 }}
+spec:
+  secretName: {{ .Values.certManager.certificates.ingressClient.secretName }}
+  issuerRef:
+    name: {{ .Values.certManager.certificates.ingressClient.issuerRef.name }}
+    kind: {{ .Values.certManager.certificates.ingressClient.issuerRef.kind }}
+  commonName: {{ include "hybrid-rag.fullname" . }}-ingress-client
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  renewBefore: {{ .Values.certManager.certificates.renewBefore }}
+  usages:
+    - client auth
+{{- end }}

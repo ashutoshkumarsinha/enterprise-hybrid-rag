@@ -1,0 +1,26 @@
+{{- if and .Values.certManager.certificates.enabled .Values.certManager.certificates.queryMtls.enabled .Values.query.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "hybrid-rag.fullname" . }}-query-mtls
+  labels:
+    {{- include "hybrid-rag.labels" . | nindent 4 }}
+spec:
+  secretName: {{ .Values.query.mtls.certSecret }}
+  issuerRef:
+    name: {{ .Values.certManager.certificates.queryMtls.issuerRef.name }}
+    kind: {{ .Values.certManager.certificates.queryMtls.issuerRef.kind }}
+  dnsNames:
+    - {{ include "hybrid-rag.fullname" . }}-query
+    - {{ include "hybrid-rag.fullname" . }}-query.{{ .Release.Namespace }}.svc
+    - {{ include "hybrid-rag.fullname" . }}-query.{{ .Release.Namespace }}.svc.cluster.local
+    {{- range .Values.certManager.certificates.queryMtls.additionalDnsNames }}
+    - {{ . }}
+    {{- end }}
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  renewBefore: {{ .Values.certManager.certificates.renewBefore }}
+  usages:
+    - server auth
+{{- end }}

@@ -5,11 +5,8 @@ from __future__ import annotations
 import os
 
 from app.connectors.base import Connector
-from app.connectors.confluence import ConfluenceConnector
 from app.connectors.filesystem import FilesystemConnector
-from app.connectors.google_drive import GoogleDriveConnector
 from app.connectors.s3 import S3Connector
-from app.connectors.sharepoint import SharePointConnector
 
 
 def get_connector(
@@ -34,10 +31,4 @@ def get_connector(
             collection_id=collection_id,
             prefix=prefix,
         )
-    if kind in ("sharepoint", "sp"):
-        return SharePointConnector(tenant_id=tenant_id, collection_id=collection_id)
-    if kind in ("confluence", "cf"):
-        return ConfluenceConnector(tenant_id=tenant_id, collection_id=collection_id)
-    if kind in ("google_drive", "gdrive", "google-drive"):
-        return GoogleDriveConnector(tenant_id=tenant_id, collection_id=collection_id)
     raise ValueError(f"unsupported connector type: {connector_type}")

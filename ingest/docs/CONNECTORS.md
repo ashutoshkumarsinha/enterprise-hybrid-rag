@@ -15,11 +15,6 @@ class Connector(Protocol):
 |-----------|-------|------|-------|
 | Filesystem | v1 | OS perms | Dev + air-gapped; `paths.documents_source_dir` |
 | S3 / MinIO | P2 | IAM keys | Prefix per collection |
-| SharePoint | P2 | OAuth app | Delta sync via `since` |
-| Confluence | P3 | API token | Page tree → documents |
-| Google Drive | P3 | OAuth | Shared drives |
-
-**E-31:** `sharepoint` and `confluence` connectors ship stub-first (`CONNECTOR_STUB=true`). Production uses OAuth / API token env vars — see `ingest/app/connectors/sharepoint.py` and `confluence.py`.
 
 ## Config (`config/ingest.toml`)
 
@@ -27,8 +22,6 @@ class Connector(Protocol):
 [connectors]
 filesystem_enabled = true
 s3_enabled = false
-sharepoint_enabled = false
-confluence_enabled = false
 connector_sync_interval_minutes = 60
 ```
 

@@ -35,12 +35,35 @@ helm upgrade --install hybrid-rag ./deploy/helm/hybrid-rag \
   --namespace hybrid-rag --create-namespace
 ```
 
-## Secrets
+## Secrets and TLS
 
-Create out-of-band (External Secrets Operator recommended):
+Create out-of-band (External Secrets Operator) or via **cert-manager** (recommended for TLS/mTLS):
 
 - `hybrid-rag-query-secrets` — `CATALOG_DSN_*`, `NEO4J_PASSWORD`, `MINIO_SECRET_KEY`, Langfuse keys
 - `hybrid-rag-ingest-secrets` — `CATALOG_DSN`, store credentials, Celery secrets
+
+### cert-manager (production PKI)
+
+Install platform controllers and bootstrap internal CA:
+
+```bash
+make infra-cert-manager-install
+make infra-cert-manager-issuer
+make infra-cert-manager-sync-ca APP_NS=hybrid-rag
+```
+
+Helm `Certificate` CRs (gated by `certManager.certificates.enabled`) issue:
+
+| Secret | Purpose |
+|--------|---------|
+| `hybrid-rag-tls-prod` | Public ingress TLS |
+| `hybrid-rag-query-mtls` | Query MCP listener cert/key |
+| `hybrid-rag-ingress-mtls-client` | nginx upstream client cert |
+| `hybrid-rag-root-ca` | Client-CA for query mTLS verify |
+
+Enable in `values-prod.yaml` (already set): `certManager.certificates.enabled: true`, `query.mtls.enabled: true`.
+
+See `infra/docs/CERT_MANAGER.md`.
 
 ## OQ1 — managed vs self-hosted
 

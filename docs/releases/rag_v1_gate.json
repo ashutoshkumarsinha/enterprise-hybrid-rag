@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "target_tag": "rag-v1.0",
   "updated": "2026-07-11",
   "automated_gates": [
@@ -12,12 +12,24 @@
     "pytest query/tests/unit query/tests/contract",
     "pytest ingest/tests/unit ingest/tests/contract"
   ],
-  "optional_live_gates": [
+  "pre_release_gates": [
+    "make validate-pre-release",
+    "scripts/validate_live_stack.sh",
+    "scripts/migrate_catalog.sh",
+    "scripts/bootstrap_mcp_token.sh",
+    "scripts/bootstrap_prod_quotas.sh",
+    "scripts/bootstrap_langfuse_keys.sh",
+    "observability/scripts/ensure_langfuse_init.sh",
+    "make -C infra mtls-dev-certs",
+    "make infra-cert-manager-install",
+    "make infra-cert-manager-issuer"
+  ],
+  "optional_env_gates": [
     "LIVE_STACK=1 pytest query/tests/integration",
-    "RAGAS_GATE=1 query/benchmarks/benchmark_rag.py --ragas",
-    "LOAD_GATE=1 query/benchmarks/load_test.py",
-    "make health (all planes)",
-    "cd ingest && make migrate"
+    "PRE_RELEASE=1 RAGAS_GATE=1 LOAD_GATE=1 make validate-rag-v1",
+    "RAGAS_GATE_STRICT=1",
+    "LOAD_GATE_FULL=1 LOAD_BACKEND=k6",
+    "MCP_MTLS_SMOKE=1"
   ],
   "manual_checklist": "docs/SPEC_ROADMAP.md section 4"
 }

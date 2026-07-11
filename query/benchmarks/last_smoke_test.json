@@ -1,5 +1,5 @@
 {
-  "run_at": "2026-07-11T07:26:34.581043+00:00",
+  "run_at": "2026-07-11T08:15:17.016141+00:00",
   "mode": "in_process",
   "query_url": null,
   "ingest_url": null,
@@ -18,7 +18,7 @@
   "research_stream": {
     "status": 200,
     "ok": true,
-    "ttft_ms": 4,
+    "ttft_ms": 5,
     "total_ms": 5,
     "event_types": [
       "token",

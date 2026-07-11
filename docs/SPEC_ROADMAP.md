@@ -127,7 +127,6 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | ID | Enhancement | Notes |
 |----|-------------|-------|
 | E-30 | Cross-collection queries | **Done** — `additional_collection_ids`, `docs/CROSS_COLLECTION_QUERIES.md`, `test_p3_cross_collection.py` |
-| E-31 | Confluence / SharePoint connectors | **Done** — `connectors/sharepoint.py`, `confluence.py`, `test_p3_connectors.py` |
 | E-32 | Federated MCP (multi-region catalog) | **Done** — `docs/FEDERATED_MCP.md`, `federated_catalog.py`, Helm `federatedMcp` |
 | E-33 | Per-tenant Qdrant collections (regulated tier) | **Done** — migration 005, `qdrant_collection.py`, `docs/REGULATED_TENANT_QDRANT.md` |
 
@@ -140,12 +139,15 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | OQ1 managed stores | **Done** — `docs/MANAGED_STORES.md` |
 | OQ4 external IdP | **Done** — `infra/docs/KEYCLOAK.md` §9 |
 | INF-P6 read replicas | **Done** — `infra/docs/SCALE_OUT.md` |
-| Google Drive connector | **Done** — `connectors/google_drive.py` |
+| Federated research merge | **Done** — `federated_research.py`, `FEDERATED_RESEARCH_ENABLED` |
+| Query quota suffix via `CATALOG_DSN_RO` | **Done** — `query/app/quota_store.py` |
+| mTLS query MCP listener | **Done** — `app/server.py`, `tls_config.py`, `MCP_MTLS_ENABLED` |
+| Platform spec §22 inventory | **Done** — aligned to rag-v1.0 |
 | E-33 quota suffix API | **Done** — `quota_store` + migration 005 |
 | E-30 multi_top_k | **Done** — `scope_strategy` + parallel retrieve |
 | rag-v1.0 gate | **Done** — `make validate-rag-v1`, `docs/releases/rag_v1_gate.json` |
 
-**Release gate:** `make validate-rag-v1` · optional: `LIVE_STACK=1`, `RAGAS_GATE=1`, `LOAD_GATE=1`
+**Release gate:** `make validate-rag-v1` · pre-release: `make bootstrap && make validate-pre-release` · optional env: `LIVE_STACK=1`, `RAGAS_GATE=1`, `LOAD_GATE=1`, `PRE_RELEASE=1`
 
 ---
 
@@ -177,21 +179,22 @@ Before tagging `rag-v1.x`, verify:
 
 - [x] `index_schema_version` matches across infra, ingest, query configs (`validate_config_alignment.py`)
 - [x] `embed_dimension` matches inference embed model output (`make validate-embed-dimension`)
-- [ ] IF-1 init-db completed (`make init-db`) — live stack
-- [ ] Catalog migrations applied (`cd ingest && make migrate`) — live stack
-- [ ] IF-4 inference health passes for required models
-- [ ] IF-5 OTLP + Langfuse keys configured (query)
-- [ ] IF-6 Keycloak realm imported; MCP admin token minted (`POST /admin/mcp/tokens`)
+- [ ] IF-1 init-db completed (`make init-db`) — `make validate-pre-release` or live stack
+- [ ] Catalog migrations applied (`make migrate-catalog`) — automated in bootstrap + pre-release gate
+- [ ] IF-4 inference health passes for required models — `make validate-pre-release`
+- [ ] IF-5 OTLP + Langfuse keys configured (query) — `make bootstrap-langfuse-keys`
+- [ ] IF-6 Keycloak realm imported; MCP admin token minted — `make bootstrap-mcp-token`
 - [x] Unit + contract tests pass on every PR (`make validate-rag-v1`) — TL-11
 - [ ] Audience guides and sub-project READMEs current for shipped behavior — FR-35, NFR-25
 - [x] MCP contract tests pass (`research_documents`, session tools, `/research/stream`)
-- [ ] Golden-set p95 within baseline × 1.1 (spec §18.7) — `RAGAS_GATE=1`
-- [ ] Ragas gates pass on golden set (`benchmark_rag.py --ragas`) — `RAGAS_GATE=1`
-- [ ] k6 or Locust soak passes NFR-23 (`load_test.py`) — `LOAD_GATE=1`
-- [ ] Rate limits + quotas configured for prod tenants
+- [ ] Golden-set p95 within baseline × 1.1 (spec §18.7) — `RAGAS_GATE=1` + `compare_benchmark_run.py`
+- [ ] Ragas gates pass on golden set — `RAGAS_GATE=1` (strict: `RAGAS_GATE_STRICT=1`)
+- [ ] k6 or Locust soak passes NFR-23 — `LOAD_GATE=1` (full: `LOAD_GATE_FULL=1 LOAD_BACKEND=k6`)
+- [ ] Rate limits + quotas configured for prod tenants — `make bootstrap-prod-quotas`
 - [x] Circuit breakers enabled on query inference clients (E-28)
 - [x] OTel SDK overhead < 5% p95 vs disabled (`OBS-P3`, `--compare-otel`)
-- [ ] Infra store SLOs pass (`make health` in infra) — live stack
+- [ ] Infra store SLOs pass (`make health`) — `make validate-pre-release`
+- [ ] mTLS dev certs provisioned — `make -C infra mtls-dev-certs` (compose) or `make infra-cert-manager-install infra-cert-manager-issuer` (K8s)
 
 ---
 
@@ -233,7 +236,7 @@ See also platform spec **§22** (what to spec next).
 |----|----------|-------------------|
 | OQ1 | Managed vs self-hosted stores | **Done** — `docs/MANAGED_STORES.md` |
 | OQ2 | Embed model swap without full reindex | **Done** — E-25 migration playbook |
-| OQ3 | Federated multi-region MCP | **Done v1** — E-32 catalog federation; research federation v1.1+ |
+| OQ3 | Federated multi-region MCP | **Done v1** — E-32 catalog federation + research peer merge (`federated_research.py`) |
 | OQ4 | Keycloak vs external IdP (Azure AD) | **Done** — `infra/docs/KEYCLOAK.md` §9 |
 | OQ5 | MCP auth: token vs JWT | **Closed v0.26** — token-first; JWT bridge optional |
 

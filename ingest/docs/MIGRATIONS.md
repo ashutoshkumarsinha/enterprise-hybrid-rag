@@ -14,6 +14,7 @@ Normative SQL migrations for the Postgres **catalog** database. Infra creates ro
 | 2 | `002_conversation_sessions_v1.sql` | §4.4.2 | MCP conversation sessions |
 | 3 | `003_mcp_access_tokens_v1.sql` | §4.4.3 | MCP Bearer RBAC tokens |
 | 4 | `004_grant_query_roles_v1.sql` | §4.4.3 | Table grants for `query_session_rw`, `query_token_rw` |
+| 5 | `005_tenant_qdrant_suffix_v1.sql` | E-33 | Per-tenant Qdrant collection suffix (`tenant_quotas.qdrant_collection_suffix`) |
 
 Apply in order. Each file is wrapped in `BEGIN`/`COMMIT` and uses `IF NOT EXISTS` where applicable.
 
@@ -31,16 +32,23 @@ Apply in order. Each file is wrapped in `BEGIN`/`COMMIT` and uses `IF NOT EXISTS
 ```bash
 export CATALOG_DSN="postgresql://ingest_rw:${INGEST_RW_PASSWORD}@127.0.0.1:5432/catalog"
 
-for f in ingest/migrations/00{1,2,3,4}_*.sql; do
+for f in ingest/migrations/00{1,2,3,4,5}_*.sql; do
   psql "$CATALOG_DSN" -v ON_ERROR_STOP=1 -f "$f"
 done
+```
+
+Or from repo root:
+
+```bash
+make migrate-catalog
+make migrate-catalog-status
 ```
 
 ---
 
 ## Migration runner (normative contract)
 
-**Target:** `ingest/app/migrate.py` (planned) · Makefile target `make migrate`
+**Target:** `ingest/app/migrate.py` · Makefile `make migrate` · root `make migrate-catalog`
 
 | Requirement | Rule |
 |-------------|------|

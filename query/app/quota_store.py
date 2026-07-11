@@ -34,10 +34,20 @@ class QuotaStore(ABC):
     def get_limits(self, tenant_id: str) -> TenantQuotaLimits:
         raise NotImplementedError
 
+    def get_qdrant_collection_suffix(self, tenant_id: str) -> str | None:
+        return None
+
 
 class InMemoryQuotaStore(QuotaStore):
     def __init__(self) -> None:
         self._limits: dict[str, TenantQuotaLimits] = {}
+        self._suffixes: dict[str, str] = {}
+
+    def set_qdrant_suffix(self, tenant_id: str, suffix: str) -> None:
+        self._suffixes[tenant_id] = suffix
+
+    def get_qdrant_collection_suffix(self, tenant_id: str) -> str | None:
+        return self._suffixes.get(tenant_id)
 
     def set_limits(self, tenant_id: str, *, query_qps: float, max_concurrent_streams: int) -> None:
         self._limits[tenant_id] = TenantQuotaLimits(
@@ -82,6 +92,25 @@ class PostgresQuotaStore(QuotaStore):
             query_qps=float(row[0]),
             max_concurrent_streams=int(row[1]),
         )
+
+    def get_qdrant_collection_suffix(self, tenant_id: str) -> str | None:
+        try:
+            with self._connect() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        SELECT qdrant_collection_suffix
+                        FROM tenant_quotas
+                        WHERE tenant_id = %s
+                        """,
+                        (tenant_id,),
+                    )
+                    row = cur.fetchone()
+        except Exception:
+            return None
+        if not row or not row[0]:
+            return None
+        return str(row[0]).strip()
 
 
 _store: QuotaStore | None = None

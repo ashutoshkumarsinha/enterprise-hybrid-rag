@@ -8,6 +8,7 @@ from fastapi import HTTPException
 
 from app.auth import enforce_tenant_binding
 from app.models import AuthContext
+from app.federated_research import merge_federated_research
 from app.mcp_format import format_research_markdown
 from app.rag_graph import run_rag_pipeline
 from app.rag_state import RAGState
@@ -82,7 +83,14 @@ async def handle_research_documents(
             abstained=False,
         )
         final = await run_rag_pipeline(state)
+        final = await merge_federated_research(final, args, ctx=ctx)
         markdown = format_research_markdown(final)
+
+        response: dict[str, Any] = {"markdown": markdown, "stub": final.get("stub", True)}
+        if args.get("federated_internal") and _federated_token_valid(args):
+            response["answer_text"] = final.get("answer_text", "")
+            response["sources"] = final.get("sources") or []
+            response["federated_regions"] = final.get("federated_regions") or []
 
         if settings.sessions_enabled and session_id and final.get("answer_text"):
             try:
@@ -103,7 +111,19 @@ async def handle_research_documents(
             except KeyError:
                 raise HTTPException(status_code=404, detail={"code": "session_not_found"}) from None
 
-        return {"markdown": markdown, "stub": final.get("stub", True)}
+        return response
+
+
+def _federated_token_valid(args: dict[str, Any]) -> bool:
+    import os
+
+    if not args.get("federated_internal"):
+        return False
+    expected = os.environ.get("FEDERATED_MCP_SERVICE_TOKEN", "")
+    if not expected:
+        return os.environ.get("DEPLOY_ENV", "dev") == "dev"
+    supplied = args.get("_federated_service_token") or ""
+    return supplied == expected
 
 
 def handle_create_session(

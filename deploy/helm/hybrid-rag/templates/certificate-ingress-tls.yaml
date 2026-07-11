@@ -1,0 +1,22 @@
+{{- if and .Values.certManager.certificates.enabled .Values.certManager.certificates.ingress.enabled .Values.ingress.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "hybrid-rag.fullname" . }}-ingress-tls
+  labels:
+    {{- include "hybrid-rag.labels" . | nindent 4 }}
+spec:
+  secretName: {{ .Values.ingress.tls.secretName }}
+  issuerRef:
+    name: {{ .Values.certManager.certificates.ingress.issuerRef.name }}
+    kind: {{ .Values.certManager.certificates.ingress.issuerRef.kind }}
+  dnsNames:
+    - {{ .Values.ingress.host }}
+    {{- range .Values.certManager.certificates.ingress.additionalDnsNames }}
+    - {{ . }}
+    {{- end }}
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  renewBefore: {{ .Values.certManager.certificates.renewBefore }}
+{{- end }}

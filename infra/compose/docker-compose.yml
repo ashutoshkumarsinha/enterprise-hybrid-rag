@@ -149,6 +149,7 @@ services:
       - "${CADDY_HTTPS_PORT:-443}:443"
     volumes:
       - ../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${MTLS_CERT_DIR:-../certs/dev}:/etc/caddy/certs:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks: [hybrid-rag-net]

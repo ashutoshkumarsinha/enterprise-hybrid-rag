@@ -29,6 +29,8 @@ Parent platform: [../ENTERPRISE_HYBRID_RAG_SPEC.md](../ENTERPRISE_HYBRID_RAG_SPE
 | [docs/POSTGRES.md](./docs/POSTGRES.md) | Catalog DB, roles |
 | [docs/KEYCLOAK.md](./docs/KEYCLOAK.md) | OIDC realm, clients, mod-chat integration |
 | [docs/CADDY.md](./docs/CADDY.md) | TLS edge, MCP proxy |
+| [docs/MTLS.md](./docs/MTLS.md) | mTLS between tiers (E-34) |
+| [docs/CERT_MANAGER.md](./docs/CERT_MANAGER.md) | Production PKI via cert-manager |
 | [docs/PERFORMANCE.md](./docs/PERFORMANCE.md) | Store tuning, Redis, Caddy SSE |
 | [docs/INTEGRATION.md](./docs/INTEGRATION.md) | How query & ingest connect |
 
@@ -49,7 +51,18 @@ Optional MCP edge:
 
 ```bash
 make up PROFILE=edge
+make mtls-dev-certs   # local OpenSSL PKI for compose
 ```
+
+Kubernetes production PKI:
+
+```bash
+make cert-manager-install
+make cert-manager-issuer
+make cert-manager-sync-ca APP_NS=hybrid-rag
+```
+
+See [docs/CERT_MANAGER.md](./docs/CERT_MANAGER.md).
 
 ## Consumer URLs (application env)
 

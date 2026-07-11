@@ -81,6 +81,7 @@ env: ## Copy .env.example → .env in each sub-project (skip if .env exists)
 # ---------------------------------------------------------------------------
 
 .PHONY: infra-up infra-down infra-health infra-init-db infra-init-catalog-indexes infra-logs
+.PHONY: infra-cert-manager-install infra-cert-manager-issuer infra-cert-manager-health infra-cert-manager-sync-ca
 infra-up: network ## Start infra stores + Keycloak
 	@$(MAKE) -C $(INFRA_DIR) up
 
@@ -99,6 +100,18 @@ infra-init-catalog-indexes: ## Apply INF-P2 Postgres catalog indexes
 infra-logs: ## Tail infra logs
 	@$(MAKE) -C $(INFRA_DIR) logs
 
+infra-cert-manager-install: ## Install cert-manager into cluster (Kubernetes PKI)
+	@$(MAKE) -C $(INFRA_DIR) cert-manager-install
+
+infra-cert-manager-issuer: ## Bootstrap hybrid-rag root CA ClusterIssuers
+	@$(MAKE) -C $(INFRA_DIR) cert-manager-issuer
+
+infra-cert-manager-health: ## Health check cert-manager
+	@$(MAKE) -C $(INFRA_DIR) cert-manager-health
+
+infra-cert-manager-sync-ca: ## Copy root CA to app namespace (APP_NS=hybrid-rag)
+	@$(MAKE) -C $(INFRA_DIR) cert-manager-sync-ca APP_NS=$(or $(APP_NS),hybrid-rag)
+
 .PHONY: inference-up inference-down inference-health inference-logs
 inference-up: network ## Start inference (PROFILE=$(INFERENCE_PROFILE))
 	@$(MAKE) -C $(INFERENCE_DIR) up PROFILE=$(INFERENCE_PROFILE)
@@ -113,6 +126,8 @@ inference-logs: ## Tail inference logs
 	@$(MAKE) -C $(INFERENCE_DIR) logs PROFILE=$(INFERENCE_PROFILE)
 
 .PHONY: observability-up observability-down observability-health observability-logs synthetic-trace
+observability-bootstrap-langfuse: ## Sync Langfuse API keys into query/.env (IF-5)
+	@$(MAKE) -C $(OBSERVABILITY_DIR) bootstrap-langfuse-keys
 observability-up: network ## Start Langfuse + OTel + Jaeger (OBS_PROFILE=signoz|metrics for optional backends)
 	@$(MAKE) -C $(OBSERVABILITY_DIR) up PROFILE=$(OBS_PROFILE)
 
@@ -160,8 +175,26 @@ query-logs: ## Tail query logs
 
 .PHONY: bootstrap up down health logs
 .PHONY: migrate-catalog
-migrate-catalog: ## Apply catalog DDL via ingest migration runner
-	@$(MAKE) -C $(INGEST_DIR) migrate || echo "WARN: migrate skipped (set CATALOG_DSN in ingest/.env)"
+migrate-catalog: ## Apply catalog DDL via ingest migration runner (host DSN)
+	@chmod +x scripts/migrate_catalog.sh 2>/dev/null || true
+	@./scripts/migrate_catalog.sh
+
+migrate-catalog-status: ## Show applied/pending catalog migrations
+	@chmod +x scripts/migrate_catalog.sh 2>/dev/null || true
+	@./scripts/migrate_catalog.sh --status
+
+bootstrap-mcp-token: ## Mint bootstrap MCP admin token (IF-6)
+	@chmod +x scripts/bootstrap_mcp_token.sh 2>/dev/null || true
+	@./scripts/bootstrap_mcp_token.sh
+
+bootstrap-prod-quotas: ## Seed default tenant quotas on ingest
+	@chmod +x scripts/bootstrap_prod_quotas.sh 2>/dev/null || true
+	@./scripts/bootstrap_prod_quotas.sh
+
+bootstrap-langfuse-keys: ## Sync Langfuse API keys observability → query/.env (IF-5)
+	@chmod +x scripts/bootstrap_langfuse_keys.sh observability/scripts/ensure_langfuse_init.sh 2>/dev/null || true
+	@./observability/scripts/ensure_langfuse_init.sh
+	@./scripts/bootstrap_langfuse_keys.sh
 
 query-test: ## Run query pytest suites
 	@cd $(QUERY_DIR) && python -m pytest tests/contract tests/unit -q --tb=short 2>/dev/null || \
@@ -171,7 +204,7 @@ bootstrap: env ## Bootstrap full dev stack (infra → inference → obs → inge
 	@echo "==> 1/6 infra (stores + Keycloak)"
 	@$(MAKE) infra-up
 	@$(MAKE) infra-init-db
-	@$(MAKE) migrate-catalog || echo "WARN: migrate-catalog skipped (set CATALOG_DSN in ingest/.env)"
+	@$(MAKE) migrate-catalog
 	@$(MAKE) infra-init-catalog-indexes || echo "WARN: catalog indexes skipped (set CATALOG_DSN)"
 	@$(MAKE) infra-health
 	@echo "==> 2/6 inference (PROFILE=$(INFERENCE_PROFILE))"
@@ -180,12 +213,15 @@ bootstrap: env ## Bootstrap full dev stack (infra → inference → obs → inge
 	@echo "==> 3/6 observability"
 	@$(MAKE) observability-up
 	@$(MAKE) observability-health
+	@$(MAKE) observability-bootstrap-langfuse || echo "WARN: Langfuse key bootstrap skipped"
 	@echo "==> 4/6 ingest"
 	@$(MAKE) ingest-up
 	@$(MAKE) ingest-health
 	@echo "==> 5/6 query"
 	@$(MAKE) query-up
 	@$(MAKE) query-health
+	@$(MAKE) bootstrap-mcp-token || echo "WARN: MCP token bootstrap skipped"
+	@$(MAKE) bootstrap-prod-quotas || echo "WARN: quota bootstrap skipped"
 ifeq ($(INFRA_EDGE),true)
 	@echo "==> 6/6 infra edge (Caddy)"
 	@$(MAKE) -C $(INFRA_DIR) up PROFILE=edge
@@ -325,6 +361,10 @@ validate-p3: ## P3 gate — E-30..E-33 advanced product deliverables
 validate-rag-v1: ## rag-v1.0 release gate — P1+P2+P3 + full contract suite
 	@chmod +x scripts/validate_rag_v1.sh scripts/validate_config_alignment.py 2>/dev/null || true
 	@./scripts/validate_rag_v1.sh
+
+validate-pre-release: ## Live-stack pre-release gate (health, migrate, Ragas, load)
+	@chmod +x scripts/validate_live_stack.sh scripts/migrate_catalog.sh 2>/dev/null || true
+	@./scripts/validate_live_stack.sh
 
 validate-embed-dimension: ## E-25 embed_dimension consistency check
 	@PY=$$( [ -x $(INGEST_DIR)/.venv/bin/python ] && echo $(INGEST_DIR)/.venv/bin/python || echo python3 ); \

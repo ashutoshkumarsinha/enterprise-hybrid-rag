@@ -18,6 +18,20 @@ Ingress host: https://{{ .Values.ingress.host }}
   SSE: {{ .Values.ingress.paths.researchStream }}
 {{- end }}
 
+
+{{- if .Values.certManager.certificates.enabled }}
+
+cert-manager:
+  Certificates will be issued into secrets referenced by ingress TLS and query mTLS.
+  Platform prerequisite: make infra-cert-manager-install && make infra-cert-manager-issuer
+  Sync root CA: make infra-cert-manager-sync-ca APP_NS={{ .Release.Namespace }}
+{{- end }}
+
+{{- if .Values.query.mtls.enabled }}
+
+Query mTLS: enabled — ingress upstream HTTPS when ingressClient certificate is enabled.
+{{- end }}
+
 Secrets:
   Create Kubernetes secrets referenced by existingSecret values before traffic:
     - {{ .Values.query.existingSecret }}

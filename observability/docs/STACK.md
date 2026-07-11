@@ -73,15 +73,19 @@ Use both in dev: LangSmith for graph debugging; Langfuse + OTel for production S
 ```bash
 cd observability
 cp .env.example .env
-make up
+make up          # runs langfuse-init then starts stack
 make health
+make bootstrap-langfuse-keys   # from repo root, or: make -C observability bootstrap-langfuse-keys
 ```
 
-1. Open Langfuse: http://localhost:3000 — create org/project and API keys.
-2. Copy keys into consumer `.env` files:
+Langfuse API keys are provisioned via **headless init** (`LANGFUSE_INIT_*` in `observability/.env`) and synced into `query/.env` automatically.
+
+Manual UI path (optional): open http://localhost:3000 if you skip headless init.
+
+Consumer env (written by bootstrap):
 
 ```bash
-# query/.env or mod-chat/.env
+# query/.env
 LANGFUSE_PUBLIC_KEY=pk-lf-...
 LANGFUSE_SECRET_KEY=sk-lf-...
 LANGFUSE_HOST=http://langfuse:3000   # Docker network hostname

@@ -26,7 +26,7 @@ make health
 make synthetic-trace   # optional: emit test span → Jaeger
 ```
 
-After `make up`, open **Langfuse** at http://localhost:3000, create a project, and copy API keys into `query/.env` (see [docs/STACK.md](./docs/STACK.md#3-bootstrap)).
+After `make up`, Langfuse keys are provisioned via headless init and synced with `make bootstrap-langfuse-keys` (see [docs/STACK.md](./docs/STACK.md#3-bootstrap)).
 
 Optional profiles: `make up PROFILE=metrics` (Prometheus), `make up PROFILE=signoz` (Jaeger + SigNoz collector fan-out — see [docs/SIGNOZ.md](./docs/SIGNOZ.md) and platform §10.5).
 

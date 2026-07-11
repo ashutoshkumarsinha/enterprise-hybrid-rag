@@ -46,7 +46,23 @@ make -C infra render-caddy
 
 The generated Caddyfile adds `transport http { tls … tls_client_auth … }` on every `reverse_proxy` block. See `caddy/Caddyfile.mtls.example`.
 
-**Query side:** run MCP HTTP with TLS and require client certificates (terminate at uvicorn/gunicorn or a sidecar). Dev stacks may keep plain HTTP on `127.0.0.1:8010` with mTLS disabled.
+**Query side:** run MCP HTTP with TLS and require client certificates when `MCP_MTLS_ENABLED=true`:
+
+```bash
+# query/.env
+MCP_MTLS_ENABLED=true
+MCP_TLS_CERT=/etc/query/certs/server.crt
+MCP_TLS_KEY=/etc/query/certs/server.key
+MCP_TLS_CLIENT_CA=/etc/query/certs/client-ca.crt   # require Caddy client cert
+```
+
+Start listener:
+
+```bash
+python -m app.server   # Dockerfile CMD; honors MCP_MTLS_*
+```
+
+`/healthz` reports `"mtls_enabled": true` when active.
 
 ---
 
@@ -105,7 +121,7 @@ query:
 | Caddy → query client cert | 90d | Rolling query + Caddy reload |
 | Mesh identity | Automatic (Linkerd) | N/A |
 
-Document issuer (`internal`, corporate PKI, cert-manager `Certificate` CR) in your runbook.
+Document issuer (`internal`, corporate PKI, cert-manager `Certificate` CR) in your runbook. See [`CERT_MANAGER.md`](./CERT_MANAGER.md) for install and Helm integration.
 
 ---
 
@@ -114,7 +130,20 @@ Document issuer (`internal`, corporate PKI, cert-manager `Certificate` CR) in yo
 ```bash
 make validate-p2          # contract tests E-34
 make -C infra render-caddy
+make -C infra mtls-dev-certs   # local compose PKI
+make -C infra cert-manager-install cert-manager-issuer   # Kubernetes PKI
 caddy validate --config infra/caddy/Caddyfile
 ```
 
-**Smoke:** `curl --cert client.crt --key client.key https://rag.example.com/mcp/healthz`
+**Dev cert layout** (`make -C infra mtls-dev-certs`):
+
+| File | Mount / env |
+|------|-------------|
+| `server.crt` / `server.key` | `MCP_TLS_CERT` / `MCP_TLS_KEY` on query |
+| `client-ca.crt` | `MCP_TLS_CLIENT_CA` (require Caddy client cert) |
+| `caddy-client.crt` / `.key` | Caddy `[caddy.mtls] upstream_cert` / `upstream_key` |
+| `ca.crt` | Caddy `upstream_ca` |
+
+Compose edge profile mounts `infra/certs/dev` at `/etc/caddy/certs`.
+
+**Smoke:** `curl --cert client.crt --key client.key --cacert ca.crt https://127.0.0.1:8443/healthz`

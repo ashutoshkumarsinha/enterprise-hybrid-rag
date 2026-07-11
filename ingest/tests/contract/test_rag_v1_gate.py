@@ -19,6 +19,10 @@ def test_rag_v1_gate_manifest_exists() -> None:
 
 def test_rag_v1_validate_script_exists() -> None:
     assert VALIDATE.is_file()
+    live = REPO_ROOT / "scripts" / "validate_live_stack.sh"
+    assert live.is_file()
+    migrate = REPO_ROOT / "scripts" / "migrate_catalog.sh"
+    assert migrate.is_file()
 
 
 def test_oq_and_inf_docs_on_disk() -> None:
@@ -26,9 +30,19 @@ def test_oq_and_inf_docs_on_disk() -> None:
         "docs/MANAGED_STORES.md",
         "infra/docs/SCALE_OUT.md",
         "infra/docs/KEYCLOAK.md",
+        "infra/scripts/gen_mtls_certs.sh",
+        "infra/k8s/cert-manager/install.sh",
+        "infra/docs/CERT_MANAGER.md",
+        "scripts/validate_live_stack.sh",
+        "scripts/migrate_catalog.sh",
+        "scripts/bootstrap_mcp_token.sh",
+        "scripts/bootstrap_langfuse_keys.sh",
+        "observability/scripts/ensure_langfuse_init.sh",
         "ingest/migrations/005_tenant_qdrant_suffix_v1.sql",
         "ingest/app/otel_metrics.py",
-        "ingest/app/connectors/google_drive.py",
+        "query/app/federated_research.py",
+        "query/app/tls_config.py",
+        "query/app/server.py",
     ]
     for rel in paths:
         assert (REPO_ROOT / rel).is_file(), rel

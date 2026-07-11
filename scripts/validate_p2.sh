@@ -11,6 +11,7 @@ echo "==> P2 manifest + E-34/E-24/E-25 contracts"
 "$PY" -m pytest \
   ingest/tests/contract/test_p2_manifest.py \
   ingest/tests/contract/test_p2_mtls.py \
+  ingest/tests/contract/test_cert_manager.py \
   ingest/tests/contract/test_p2_multi_region.py \
   ingest/tests/contract/test_p2_embed_migration.py \
   ingest/tests/contract/test_infra_caddyfile.py \

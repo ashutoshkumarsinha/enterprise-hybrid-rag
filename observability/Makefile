@@ -10,12 +10,12 @@ PUSH     ?= false
 PACKER_ARGS := -var "image_tag=$(IMAGE_TAG)" -var "registry=$(REGISTRY)" -var "push=$(PUSH)"
 PROFILE ?=
 
-.PHONY: up down health logs network synthetic-trace import-signoz validate-prometheus validate-collector packer-init packer-validate packer-build
+.PHONY: up down health logs network synthetic-trace import-signoz validate-prometheus validate-collector langfuse-init bootstrap-langfuse-keys packer-init packer-validate packer-build
 
 network:
 	docker network inspect hybrid-rag-net >/dev/null 2>&1 || docker network create hybrid-rag-net
 
-up: network
+up: network langfuse-init
 ifeq ($(PROFILE),metrics)
 	$(COMPOSE) --profile metrics up -d langfuse-postgres langfuse jaeger otel-collector prometheus
 else ifeq ($(PROFILE),signoz)
@@ -36,6 +36,14 @@ down:
 health:
 	@chmod +x scripts/*.sh 2>/dev/null || true
 	@./scripts/healthcheck.sh
+
+langfuse-init: ## Ensure .env has LANGFUSE_INIT_* headless bootstrap vars
+	@chmod +x scripts/ensure_langfuse_init.sh
+	@./scripts/ensure_langfuse_init.sh
+
+bootstrap-langfuse-keys: langfuse-init ## Copy API keys into query/.env
+	@chmod +x ../scripts/bootstrap_langfuse_keys.sh
+	@../scripts/bootstrap_langfuse_keys.sh
 
 synthetic-trace:
 	@chmod +x scripts/*.sh 2>/dev/null || true

@@ -63,7 +63,21 @@ ConfigMap emits `FEDERATED_MCP_ENABLED`, `MCP_REGION`, `MCP_PEER_ENDPOINTS_JSON`
 - `get_document_metadata` — local first, then peer fallback
 - Peer calls: `POST {peer}/mcp/tools/list_indexed_documents` and `get_document_metadata`
 
-**Research / RAG** still uses regional Qdrant replica (E-24). Federation applies to **catalog MCP tools** only in E-32 v1.
+**Research / RAG** uses regional Qdrant replica (E-24). Federation applies to **catalog MCP tools** and **`research_documents`** when `FEDERATED_RESEARCH_ENABLED=true`.
+
+### Research merge (`query/app/federated_research.py`)
+
+1. Local region runs full LangGraph RAG against regional Qdrant.
+2. Peer regions receive `POST /mcp/tools/research_documents` with `federated_internal: true` and `X-Federated-Service-Token`.
+3. Responses merge:
+   - **Sources** — union across regions (dedupe by `document_id` + `version_id`)
+   - **Answer** — tenant **home region** wins when different from local; optional `FEDERATED_RESEARCH_APPEND=true` adds regional sections
+
+```bash
+FEDERATED_RESEARCH_ENABLED=true
+FEDERATED_MCP_SERVICE_TOKEN=change-me-federation
+MCP_TENANT_HOME_REGION_JSON='{"acme-corp":"us-east-1"}'
+```
 
 ---
 
@@ -79,8 +93,16 @@ ConfigMap emits `FEDERATED_MCP_ENABLED`, `MCP_REGION`, `MCP_PEER_ENDPOINTS_JSON`
 
 ## 5. Future
 
-- Tenant home-region routing table in catalog
-- Sticky session federation
-- Cross-region `research_documents` merge (v1.1+)
+- Sticky session federation across regions
+- Cross-region vector index routing (beyond catalog + research merge)
 
 See also: [`docs/MULTI_REGION.md`](./MULTI_REGION.md)
+
+---
+
+## 6. Validation
+
+```bash
+make validate-rag-v1
+pytest ingest/tests/contract/test_federated_research.py
+```

@@ -11,6 +11,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 MTLS_DOC = REPO_ROOT / "infra" / "docs" / "MTLS.md"
 MTLS_EXAMPLE = REPO_ROOT / "infra" / "caddy" / "Caddyfile.mtls.example"
 RENDER_SCRIPT = REPO_ROOT / "infra" / "scripts" / "render_caddyfile.py"
+GEN_CERTS = REPO_ROOT / "infra" / "scripts" / "gen_mtls_certs.sh"
 INFRA_TOML = REPO_ROOT / "infra" / "config" / "infra.toml.example"
 
 
@@ -57,3 +58,20 @@ upstream_key = "/etc/caddy/certs/client.key"
     assert "tls_trust_pool file" in out
     assert "tls_client_auth" in out
     assert "flush_interval -1" in out
+
+
+def test_gen_mtls_certs_script_produces_dev_layout() -> None:
+    assert GEN_CERTS.is_file()
+    with tempfile.TemporaryDirectory() as tmp:
+        env = {"MTLS_CERT_DIR": tmp}
+        result = subprocess.run(
+            [str(GEN_CERTS)],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**dict(__import__("os").environ), **env},
+        )
+        assert result.returncode == 0, result.stderr
+        out = Path(tmp)
+        for name in ("ca.crt", "server.crt", "server.key", "caddy-client.crt", "client-ca.crt"):
+            assert (out / name).is_file(), name

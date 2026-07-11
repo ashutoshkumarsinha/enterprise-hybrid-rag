@@ -71,12 +71,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Live integration (requires local stack / self-hosted)
+      - name: Live pre-release gate (self-hosted: docker + make bootstrap)
         run: |
-          echo "Dispatch-only live job. On self-hosted runners: make bootstrap && make test-integration"
-          make test-integration || {
+          echo "Dispatch-only live job."
+          echo "Self-hosted: make env && INFERENCE_PROFILE=dev make bootstrap"
+          echo "             make validate-pre-release"
+          echo "Or: PRE_RELEASE=1 RAGAS_GATE=1 LOAD_GATE=1 make validate-rag-v1"
+          if command -v docker >/dev/null 2>&1; then
+            make env
+            INFERENCE_PROFILE=dev make bootstrap
+            make validate-pre-release
+          else
+            echo "WARN: docker not available on runner — skipping live stack"
             if [[ "${LIVE_STACK_STRICT}" == "true" ]]; then
               exit 1
             fi
-            echo "WARN: integration skipped or failed (non-strict)"
-          }
+          fi

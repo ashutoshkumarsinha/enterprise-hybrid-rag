@@ -19,6 +19,15 @@ Langfuse is the **LLM-native trace store** — generations, token costs, session
 
 Compose service: [../compose/docker-compose.yml](../compose/docker-compose.yml) → `langfuse` service.
 
+**Headless bootstrap (dev/staging):** `observability/.env` sets `LANGFUSE_INIT_*` variables; Langfuse provisions org, project, and API keys on startup. Sync to query:
+
+```bash
+make -C observability langfuse-init
+make bootstrap-langfuse-keys   # repo root
+```
+
+See [../scripts/ensure_langfuse_init.sh](../scripts/ensure_langfuse_init.sh) and [../../scripts/bootstrap_langfuse_keys.sh](../../scripts/bootstrap_langfuse_keys.sh).
+
 ---
 
 ## 2. Application SDK config
@@ -40,7 +49,7 @@ export LANGFUSE_PUBLIC_KEY=pk-lf-...
 export LANGFUSE_SECRET_KEY=sk-lf-...
 ```
 
-SDK active when `enabled=true` **and** both keys set.
+SDK active when `enabled=true` **and** both keys set. **Automated:** `make bootstrap-langfuse-keys` copies headless-init keys from `observability/.env` into `query/.env`.
 
 ---
 

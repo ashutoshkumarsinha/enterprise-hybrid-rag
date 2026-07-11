@@ -21,7 +21,7 @@ Parent platform: [../ENTERPRISE_HYBRID_RAG_SPEC.md](../ENTERPRISE_HYBRID_RAG_SPE
 | [docs/PIPELINE.md](./docs/PIPELINE.md) | Parse → chunk → embed → index stages |
 | [docs/PERFORMANCE.md](./docs/PERFORMANCE.md) | Backpressure, batching, quotas |
 | [docs/ADMIN_API.md](./docs/ADMIN_API.md) | `/admin/ingest/*` routes |
-| [docs/CONNECTORS.md](./docs/CONNECTORS.md) | S3, SharePoint, filesystem, … |
+| [docs/CONNECTORS.md](./docs/CONNECTORS.md) | S3, filesystem, … |
 | [docs/PARSERS.md](./docs/PARSERS.md) | PyMuPDF fast path + **Docling** quality tier |
 | [docs/DOCLING.md](./docs/DOCLING.md) | Docling parser profile (TL-10) |
 | [docs/INTEGRATION.md](./docs/INTEGRATION.md) | Stores, inference, events, observability |
