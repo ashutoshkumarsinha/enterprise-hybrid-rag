@@ -156,7 +156,7 @@ flowchart LR
 
 | Sub-project | Docs | Compose / ops | Application code | Tests / schemas |
 |-------------|------|---------------|------------------|-----------------|
-| **query** | **Complete** — `SPEC.md`, 9× `docs/` (incl. RBAC, SESSIONS, TOKEN_ADMIN, MCP stdio) | `compose/`, `Makefile`, `Dockerfile` | **rag-v1.0 candidate** — full LangGraph path + supervisor + breakers | **62 contract/unit tests** |
+| **query** | **Complete** — `SPEC.md`, 9× `docs/` (incl. RBAC, SESSIONS, TOKEN_ADMIN, MCP stdio) | `compose/`, `Makefile`, `Dockerfile` | **rag-v1.0 candidate** — full LangGraph path + supervisor + breakers + events | **67 contract/unit tests** |
 | **ingest** | **Complete** — `SPEC.md`, 7× `docs/` (incl. MIGRATIONS) | `compose/`, worker `Dockerfile` | **Partial v0.38** — full ingest plane minus beat/catalog rows | **38 contract/unit tests**; migrations 001–004 |
 | **infra** | **Complete** — `SPEC.md`, 9× `docs/` | Full store compose; Qdrant gRPC **6334** | **Partial** — `init-db.sh`, `init-minio.sh`, `postgres-init.sh` (4 catalog roles), `healthcheck.sh`, `backup.sh`, `render_caddyfile.py`, `hybrid-rag-realm.json` | No `postgres-catalog-indexes.sql` (INF-P2) |
 | **inference** | **Complete** — `SPEC.md`, 7× `docs/` | vLLM `v0.6.6` compose profiles | **Partial** — `reranker/sidecar.py` working minimal `/predict`; vLLM upstream images | Smoke scripts only |
@@ -173,6 +173,7 @@ flowchart LR
 | `query/app/graph_enrich.py` | Implemented | §6.13.2 context block formatting |
 | `query/app/supervisor.py` | Implemented | Query rewrite + scope inference JSON (§6.7) |
 | `query/app/rag_graph.py` | Implemented | Full LangGraph path + degrade ladder |
+| `query/app/event_subscriber.py`, `acl_cache.py` | Implemented v0.39 | `rag:events` subscriber; ACL + result cache invalidation |
 | `query/app/mcp_server.py` | Implemented | `/healthz`, `/sse`, MCP tools, sessions, token admin |
 | `query/app/mcp_stdio.py` | Implemented | stdio MCP transport (`python -m app.mcp_stdio`) |
 | `query/app/jwt_auth.py` | Implemented | JWKS validation + `JWT_STUB` dev mode |

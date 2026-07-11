@@ -11,6 +11,46 @@ import os
 from typing import Any
 
 _CACHE: dict[str, dict[str, Any]] = {}
+_VERSIONS: dict[tuple[str, str], int] = {}
+
+
+def _version_key(tenant_id: str, collection_id: str | None) -> tuple[str, str]:
+    return tenant_id, collection_id or ""
+
+
+def _version_redis_key(tenant_id: str, collection_id: str | None) -> str:
+    coll = collection_id or ""
+    return f"qcache:ver:{tenant_id}:{coll}"
+
+
+def get_cache_version(tenant_id: str, collection_id: str | None = None) -> int:
+    key = _version_key(tenant_id, collection_id)
+    if _stub_mode():
+        return _VERSIONS.get(key, 0)
+    try:
+        import redis
+
+        client = redis.from_url(os.environ["REDIS_URL"], decode_responses=True)
+        raw = client.get(_version_redis_key(tenant_id, collection_id))
+        return int(raw or 0)
+    except Exception:
+        return _VERSIONS.get(key, 0)
+
+
+def bump_cache_version(tenant_id: str, collection_id: str | None = None) -> int:
+    """Invalidate cached answers for a tenant/collection scope."""
+    key = _version_key(tenant_id, collection_id)
+    if _stub_mode():
+        _VERSIONS[key] = _VERSIONS.get(key, 0) + 1
+        return _VERSIONS[key]
+    try:
+        import redis
+
+        client = redis.from_url(os.environ["REDIS_URL"], decode_responses=True)
+        return int(client.incr(_version_redis_key(tenant_id, collection_id)))
+    except Exception:
+        _VERSIONS[key] = _VERSIONS.get(key, 0) + 1
+        return _VERSIONS[key]
 
 
 def _enabled() -> bool:
@@ -34,7 +74,8 @@ def cache_key(state: dict[str, Any]) -> str:
     if os.environ.get("HISTORY_AWARE_SUPERVISOR", "").lower() in ("true", "1", "yes"):
         parts.append(state.get("session_id") or "")
     digest = hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()
-    return f"qcache:{digest}"
+    version = get_cache_version(state.get("tenant_id", ""), state.get("collection_id"))
+    return f"qcache:v{version}:{digest}"
 
 
 def get_cached_answer(state: dict[str, Any]) -> dict[str, Any] | None:
@@ -74,6 +115,7 @@ def set_cached_answer(state: dict[str, Any], payload: dict[str, Any]) -> None:
 
 def clear_memory_cache() -> None:
     _CACHE.clear()
+    _VERSIONS.clear()
 
 
 def redis_healthcheck() -> bool:

@@ -38,16 +38,20 @@ tracer = get_tracer()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from app.event_subscriber import start_event_subscriber, stop_event_subscriber
+
     settings = get_settings()
     app.state.settings = settings
     app.state.token_store = create_token_store(settings)
     app.state.session_store = create_session_store(settings)
     app.state.catalog_store = create_catalog_store(settings)
     warmup_clients()
+    start_event_subscriber()
     yield
+    await stop_event_subscriber()
 
 
-app = FastAPI(title="hybrid-rag-query", version="0.3.0-langgraph", lifespan=lifespan)
+app = FastAPI(title="hybrid-rag-query", version="0.4.0-events", lifespan=lifespan)
 setup_otel(app)
 setup_langsmith()
 
