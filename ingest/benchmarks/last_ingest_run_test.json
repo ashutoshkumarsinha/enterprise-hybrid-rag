@@ -1,0 +1,16 @@
+{
+  "run_at": "2026-07-11T03:40:30.689017+00:00",
+  "mode": "mock",
+  "tenant_id": "bench-tenant",
+  "collection_id": "bench-collection",
+  "document_id": "bench-doc",
+  "batch_size": 16,
+  "chunk_count": 64,
+  "validated": 64,
+  "written": 0,
+  "documents_recorded": 1,
+  "batches": 4,
+  "elapsed_s": 0.004,
+  "chunks_per_min": 960740.76,
+  "chunks_per_sec": 16012.346
+}

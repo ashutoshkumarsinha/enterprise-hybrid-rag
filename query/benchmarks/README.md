@@ -14,7 +14,7 @@ Normative tools: **Ragas** (quality), **k6** (load primary), **Locust** (load al
 | **[k6](https://k6.io/)** | TL-09 | Load, soak, SSE `/research/stream` | Pre-release |
 | **[Locust](https://locust.io/)** | TL-09 | Same scenarios (Python-native) | Pre-release |
 | `benchmark_rag.py` | — | Stage p50/p95, scope accuracy, `--ragas` | PR warn + nightly |
-| `benchmark_ingest.py` | — | Ingest throughput | PR + nightly |
+| `benchmark_ingest.py` | — | Ingest throughput (`ingest/benchmarks/`) | PR + nightly |
 | `compare_benchmark_run.py` | — | Regression vs `baselines.json` | Nightly |
 | `load_test.py` | — | Wrapper over k6 or Locust | Pre-release |
 | LangSmith | TL-07 | LangGraph node regression (LG-4) | Eval CI optional |
@@ -110,7 +110,7 @@ python benchmarks/load_test.py --backend k6 --concurrency 50 --duration 2h  # so
 
 | Tier | Commands |
 |------|----------|
-| **PR** | `benchmark_ingest.py --mock`; `benchmark_rag.py --limit 4` (warn) |
+| **PR** | `ingest/benchmarks/benchmark_ingest.py --mock`; `benchmark_rag.py --limit 4` (warn) |
 | **Nightly** | `benchmark_rag.py --ragas`; `compare_benchmark_run.py` |
 | **Pre-release** | `load_test.py` 30m + 2h soak; chaos (staging) |
 
@@ -125,7 +125,7 @@ query/benchmarks/
 ├── baselines.json.example
 ├── golden_set.json.example   # Ragas + scope accuracy
 ├── benchmark_rag.py          # golden-set latency + optional --ragas
-├── benchmark_ingest.py       # (implement)
+├── benchmark_ingest.py       # lives in ingest/benchmarks/ (throughput)
 ├── compare_benchmark_run.py  # regression vs baselines.json
 ├── load_test.py              # k6 / Locust wrapper
 ├── k6/

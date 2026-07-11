@@ -5,7 +5,7 @@ REGISTRY ?=
 PUSH     ?= false
 PACKER_ARGS := -var "image_tag=$(IMAGE_TAG)" -var "registry=$(REGISTRY)" -var "push=$(PUSH)"
 
-.PHONY: network up down health logs build lint format migrate migrate-status packer-init packer-validate packer-build
+.PHONY: network up down health logs build lint format migrate migrate-status packer-init packer-validate packer-build benchmark benchmark-mock
 
 network:
 	docker network inspect hybrid-rag-net >/dev/null 2>&1 || docker network create hybrid-rag-net
@@ -47,6 +47,14 @@ test: ## Run ingest unit + contract tests
 
 test-integration: ## Live-stack integration (requires .env.live profile)
 	@chmod +x scripts/run-integration.sh && ./scripts/run-integration.sh -q
+
+benchmark-mock: ## Mock ingest throughput (PR warn tier)
+	@PY=$$( [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3 ); \
+	$$PY benchmarks/benchmark_ingest.py --mock --chunks 500 --warn-chunks-per-min 1000
+
+benchmark: ## Live ingest throughput (requires non-stub embed path)
+	@PY=$$( [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3 ); \
+	$$PY benchmarks/benchmark_ingest.py --live-stack --chunks 8 --fail-chunks-per-min 2.0
 
 packer-init:
 	packer init packer/

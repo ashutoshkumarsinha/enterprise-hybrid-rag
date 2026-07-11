@@ -38,6 +38,7 @@ def enqueue_connector_sync(body: dict[str, Any]) -> dict[str, Any]:
     from app.tasks import connector_sync
 
     async_result = connector_sync.delay(payload)
+    get_job_store().attach_task_id(job["job_id"], async_result.id)
     return {
         "status": "accepted",
         "job_id": job["job_id"],

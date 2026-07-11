@@ -23,7 +23,7 @@ from app.pipeline import parse_document
 from app.tasks import batch_write
 from app.telemetry import get_tracer, setup_otel
 
-app = FastAPI(title="hybrid-rag-ingest-orchestrator", version="0.8.0-catalog")
+app = FastAPI(title="hybrid-rag-ingest-orchestrator", version="0.9.0-celery-poll")
 setup_otel(app)
 tracer = get_tracer()
 
@@ -115,6 +115,7 @@ async def ingest_document(request: Request) -> dict:
             manifest_parser=body.get("manifest_parser"),
         )
         async_result = batch_write.delay(chunks, job_id=job_id)
+        get_job_store().attach_task_id(job_id, async_result.id)
         return {
             "status": "accepted",
             "job_id": job_id,

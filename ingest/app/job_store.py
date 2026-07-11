@@ -56,6 +56,10 @@ class JobStore(ABC):
     def mark_failed(self, job_id: str, *, error_message: str) -> dict[str, Any] | None:
         raise NotImplementedError
 
+    @abstractmethod
+    def attach_task_id(self, job_id: str, task_id: str) -> dict[str, Any] | None:
+        raise NotImplementedError
+
 
 def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
@@ -188,6 +192,15 @@ class InMemoryJobStore(JobStore):
             error_count=1,
             completed_at=_now_iso(),
         )
+
+    def attach_task_id(self, job_id: str, task_id: str) -> dict[str, Any] | None:
+        row = self._jobs.get(job_id)
+        if not row:
+            return None
+        metadata = dict(row.get("metadata") or {})
+        metadata["task_id"] = task_id
+        row["metadata"] = metadata
+        return dict(row)
 
 
 class PostgresJobStore(JobStore):
@@ -338,6 +351,21 @@ class PostgresJobStore(JobStore):
                     WHERE job_id = %s
                     """,
                     (error_message, job_id),
+                )
+            conn.commit()
+        return self.get_job(job_id)
+
+    def attach_task_id(self, job_id: str, task_id: str) -> dict[str, Any] | None:
+        job = self.get_job(job_id)
+        if not job:
+            return None
+        metadata = {**(job.get("metadata") or {}), "task_id": task_id}
+        manifest = _encode_manifest(job.get("job_type", "collection"), metadata)
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE ingest_jobs SET manifest_uri = %s WHERE job_id = %s",
+                    (manifest, job_id),
                 )
             conn.commit()
         return self.get_job(job_id)

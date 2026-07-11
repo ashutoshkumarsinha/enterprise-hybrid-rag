@@ -15,8 +15,15 @@ from app.telemetry import setup_otel
 from app.writers import write_chunks
 
 broker = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/1")
+result_backend = os.environ.get("CELERY_RESULT_BACKEND", broker)
 
-celery_app = Celery("hybrid-rag-ingest", broker=broker, include=["app.tasks"])
+celery_app = Celery(
+    "hybrid-rag-ingest",
+    broker=broker,
+    backend=result_backend,
+    include=["app.tasks"],
+)
+celery_app.conf.result_extended = True
 celery_app.conf.beat_schedule = build_beat_schedule()
 setup_otel()
 setup_langsmith()

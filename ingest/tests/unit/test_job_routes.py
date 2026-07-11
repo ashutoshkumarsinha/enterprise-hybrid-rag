@@ -41,6 +41,7 @@ def test_get_job_status_after_collection_enqueue(client: TestClient, monkeypatch
     assert body["job_id"] == job_id
     assert body["status"] == "pending"
     assert body["job_type"] == "connector_sync"
+    assert body["metadata"]["task_id"] == "task-456"
     assert body["stub"] is False
 
 

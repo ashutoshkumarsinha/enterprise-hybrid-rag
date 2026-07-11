@@ -121,6 +121,7 @@ make test-pr
 cd query && pytest tests/unit tests/contract -q
 cd ingest && pytest tests/unit tests/contract -q
 make benchmark-pr
+make benchmark-ingest-pr
 
 # Nightly — integration + eval (GitHub Actions: .github/workflows/nightly.yml)
 make test-nightly

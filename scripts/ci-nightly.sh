@@ -45,6 +45,26 @@ echo "==> benchmark_rag (golden set + optional Ragas)"
     --warn-faithfulness 0.80
 )
 
+echo "==> benchmark_ingest (mock)"
+(
+  cd ingest
+  PY="${ROOT}/ingest/.venv/bin/python"
+  if [[ ! -x "$PY" ]]; then PY=python3; fi
+  "$PY" benchmarks/benchmark_ingest.py --mock --chunks 500 --warn-chunks-per-min 1000
+)
+
+echo "==> benchmark_ingest (live, optional)"
+(
+  cd ingest
+  PY="${ROOT}/ingest/.venv/bin/python"
+  if [[ ! -x "$PY" ]]; then PY=python3; fi
+  LIVE_STACK="${LIVE_STACK:-1}" "$PY" benchmarks/benchmark_ingest.py \
+    --live-stack --chunks 8 --fail-chunks-per-min 2.0 || {
+      if [[ "${LIVE_STACK_STRICT:-0}" == "1" ]]; then exit 1; fi
+      echo "WARN: live ingest benchmark skipped or failed (LIVE_STACK_STRICT=0)"
+    }
+)
+
 echo "==> compare_benchmark_run"
 (
   cd query
