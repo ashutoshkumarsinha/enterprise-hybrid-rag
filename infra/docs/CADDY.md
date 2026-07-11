@@ -11,7 +11,8 @@ Caddy is the **TLS termination and public edge** for the query module's MCP HTTP
 
 | Path | Backend | Purpose |
 |------|---------|---------|
-| `{site}{mcp_path}/sse` | `hybrid-rag-query` MCP SSE (`:8010`) | MCP + `/research/stream` |
+| `{site}{mcp_path}/sse` | `hybrid-rag-query` MCP SSE (`:8010`) | MCP SSE transport |
+| `{site}/research/stream` | same upstream | BFF streaming research (POST SSE) |
 | `{site}{mcp_path}/healthz` | same upstream | Public health (optional) |
 
 **Data plane stays on internal network** — Docker `hybrid-rag-net` or localhost only.
@@ -50,6 +51,7 @@ make render-caddy
 | `flush_interval -1` | disable buffering | Low TTFT for token stream |
 | `transport http { versions 1.1 }` | HTTP/1.1 | SSE compatibility |
 | `handle_path /mcp/*` | strip prefix | Upstream sees `/sse` not `/mcp/sse` |
+| `handle /research/stream` | no strip | BFF POST SSE with `flush_interval -1` |
 
 ---
 

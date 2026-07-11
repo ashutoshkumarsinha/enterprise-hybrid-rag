@@ -1,9 +1,19 @@
 # Example MCP edge — render with scripts/render_caddyfile.py from config/infra.toml
+# INF-P4: flush_interval -1 on all SSE/streaming routes (disable edge buffering)
 
 localhost {
     tls internal
 
     handle_path /mcp/* {
+        reverse_proxy query:8010 {
+            flush_interval -1
+            transport http {
+                versions 1.1
+            }
+        }
+    }
+
+    handle /research/stream {
         reverse_proxy query:8010 {
             flush_interval -1
             transport http {

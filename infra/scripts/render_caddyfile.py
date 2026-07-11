@@ -18,13 +18,41 @@ except ImportError:
     import tomli as tomllib  # type: ignore
 
 
+def _reverse_proxy_lines(*, upstream: str, indent: str) -> list[str]:
+    pad = indent
+    inner = indent + "    "
+    return [
+        f"{pad}reverse_proxy {upstream} {{",
+        f"{inner}flush_interval -1",
+        f"{inner}header_up X-Forwarded-For {{remote_host}}",
+        f"{inner}header_up X-Real-IP {{remote_host}}",
+        f"{inner}header_up X-Forwarded-Proto {{scheme}}",
+        f"{inner}transport http {{",
+        f"{inner}    versions 1.1",
+        f"{inner}}}",
+        f"{pad}}}",
+    ]
+
+
+def _auth_gate_lines(*, indent: str, token: str) -> list[str]:
+    return [
+        f'{indent}@unauthorized {{',
+        f'{indent}    not header Authorization "Bearer {token}"',
+        f"{indent}}}",
+        f'{indent}respond @unauthorized "Unauthorized" 401',
+        "",
+    ]
+
+
 def render(caddy: dict) -> str:
     site = caddy.get("site_name", "localhost")
     email = caddy.get("email", "ops@example.com")
     tls = caddy.get("tls", False)
     mcp_path = caddy.get("mcp_path", "/mcp").rstrip("/")
+    research_path = caddy.get("research_stream_path", "/research/stream")
     upstream = caddy.get("mcp_upstream", "127.0.0.1:8010")
     token = caddy.get("mcp_bearer_token", "")
+    proxy_research = caddy.get("proxy_research_stream", True)
 
     lines = ["# Auto-generated — do not edit by hand", f"{site} {{"]
     if tls and site not in ("localhost", "127.0.0.1"):
@@ -32,35 +60,22 @@ def render(caddy: dict) -> str:
     else:
         lines.append("    tls internal")
 
+    lines.append("")
+    lines.append(f"    handle_path {mcp_path}/* {{")
     if token:
-        lines.extend(
-            [
-                f"    handle_path {mcp_path}/* {{",
-                '        @unauthorized {',
-                f'            not header Authorization "Bearer {token}"',
-                "        }",
-                '        respond @unauthorized "Unauthorized" 401',
-                "",
-            ]
-        )
-    else:
-        lines.append(f"    handle_path {mcp_path}/* {{")
+        lines.extend(_auth_gate_lines(indent="        ", token=token))
+    lines.extend(_reverse_proxy_lines(upstream=upstream, indent="        "))
+    lines.append("    }")
 
-    lines.extend(
-        [
-            f"        reverse_proxy {upstream} {{",
-            "            flush_interval -1",
-            "            header_up X-Forwarded-For {remote_host}",
-            "            header_up X-Real-IP {remote_host}",
-            "            header_up X-Forwarded-Proto {scheme}",
-            "            transport http {",
-            "                versions 1.1",
-            "            }",
-            "        }",
-            "    }",
-            "}",
-        ]
-    )
+    if proxy_research:
+        lines.append("")
+        lines.append(f"    handle {research_path} {{")
+        if token:
+            lines.extend(_auth_gate_lines(indent="        ", token=token))
+        lines.extend(_reverse_proxy_lines(upstream=upstream, indent="        "))
+        lines.append("    }")
+
+    lines.append("}")
     return "\n".join(lines) + "\n"
 
 
@@ -70,7 +85,7 @@ def main() -> int:
     parser.add_argument("--write", type=Path, default=None)
     args = parser.parse_args()
 
-    data = tomllib.loads(args.config.read_text())
+    data = tomllib.loads(args.config.read_text(encoding="utf-8"))
     caddy = data.get("caddy", {})
     if not caddy.get("proxy_mcp", True):
         print("# proxy_mcp disabled", file=sys.stderr)
@@ -78,7 +93,7 @@ def main() -> int:
 
     content = render(caddy)
     if args.write:
-        args.write.write_text(content)
+        args.write.write_text(content, encoding="utf-8")
         print(f"wrote {args.write}")
     else:
         print(content, end="")

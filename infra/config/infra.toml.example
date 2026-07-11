@@ -67,6 +67,8 @@ tls = false
 proxy_mcp = true
 mcp_path = "/mcp"
 mcp_upstream = "127.0.0.1:8010"
+proxy_research_stream = true
+research_stream_path = "/research/stream"
 mcp_bearer_token = ""
 
 [performance]
