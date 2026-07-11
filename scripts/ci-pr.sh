@@ -20,4 +20,8 @@ echo "==> ingest unit + contract"
   "$PY" -m pytest tests/unit tests/contract -q --tb=short
 )
 
+echo "==> P1 gate (E-14..E-19)"
+chmod +x scripts/validate_p1.sh 2>/dev/null || true
+./scripts/validate_p1.sh
+
 echo "PR unit+contract OK"

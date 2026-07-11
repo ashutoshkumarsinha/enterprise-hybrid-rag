@@ -11,7 +11,7 @@ from app.beat_config import beat_enabled, build_beat_schedule, load_beat_targets
 from app.connector_enqueue import enqueue_connector_sync
 from app.langsmith_config import ingest_traceable, setup_langsmith
 from app.task_jobs import on_task_failure, on_task_start, on_task_success
-from app.telemetry import setup_otel
+from app.telemetry import SPAN_BEAT_CONNECTOR_SYNC, SPAN_CONNECTOR_SYNC, SPAN_JOB_BATCH_WRITE, setup_otel
 from app.writers import write_chunks
 
 broker = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/1")
@@ -36,7 +36,7 @@ def _execute_batch_write(payload: list, job_id: str | None) -> dict:
 
     on_task_start(job_id)
     try:
-        with get_tracer().start_as_current_span("ingest.batch_write") as span:
+        with get_tracer().start_as_current_span(SPAN_JOB_BATCH_WRITE) as span:
             span.set_attribute("ingest.chunk_count", len(payload))
             span.set_attribute("module_id", "hybrid-rag-ingest")
             if job_id:
@@ -67,7 +67,7 @@ def connector_sync(payload: dict | None = None) -> dict:
     job_id = body.get("job_id")
     on_task_start(job_id)
     try:
-        with get_tracer().start_as_current_span("ingest.connector_sync") as span:
+        with get_tracer().start_as_current_span(SPAN_CONNECTOR_SYNC) as span:
             span.set_attribute("module_id", "hybrid-rag-ingest")
             if job_id:
                 span.set_attribute("ingest.job_id", job_id)
@@ -94,7 +94,7 @@ def connector_sync(payload: dict | None = None) -> dict:
 @celery_app.task(name="ingest.scheduled_connector_sync")
 def scheduled_connector_sync() -> dict:
     """Beat tick — enqueue connector sync for configured collection targets."""
-    from app.telemetry import get_tracer
+    from app.telemetry import SPAN_BEAT_CONNECTOR_SYNC, get_tracer
 
     if not beat_enabled():
         return {"enqueued": 0, "skipped": True, "reason": "beat_disabled"}
@@ -103,7 +103,7 @@ def scheduled_connector_sync() -> dict:
         return {"enqueued": 0, "skipped": True, "reason": "no_targets"}
 
     jobs: list[dict] = []
-    with get_tracer().start_as_current_span("ingest.beat.connector_sync") as span:
+    with get_tracer().start_as_current_span(SPAN_BEAT_CONNECTOR_SYNC) as span:
         span.set_attribute("ingest.target_count", len(targets))
         for target in targets:
             body = {**target, "scheduled": True}

@@ -32,6 +32,19 @@ from app.query_cache import get_cached_answer, set_cached_answer
 from app.otel_metrics import record_rag_stage_ms
 from app.rag_answer import answer_updates
 from app.rag_state import RAGState
+from app.telemetry import (
+    SPAN_RAG_NODE_ANSWER,
+    SPAN_RAG_NODE_CHECK_CACHE,
+    SPAN_RAG_NODE_EMBED,
+    SPAN_RAG_NODE_GRAPH,
+    SPAN_RAG_NODE_RERANK,
+    SPAN_RAG_NODE_RETRIEVE,
+    SPAN_RAG_NODE_SCOPE,
+    SPAN_RAG_NODE_SUPERVISOR,
+    SPAN_RAG_PIPELINE,
+    start_span,
+    traced_rag_node,
+)
 
 # Compiled graph singleton — built once per process to avoid recompilation cost.
 _COMPILED_GRAPH = None
@@ -49,6 +62,7 @@ def _tick(state: RAGState, stage: str, start: float) -> dict:
     return {"timings_ms": timings}
 
 
+@traced_rag_node(SPAN_RAG_NODE_CHECK_CACHE)
 def node_check_cache(state: RAGState) -> dict:
     """Return a cached answer when Redis query cache hits (LG-3)."""
     start = time.perf_counter()
@@ -64,6 +78,7 @@ def node_check_cache(state: RAGState) -> dict:
     return {**_tick(state, "cache_hit", start), "from_cache": False}
 
 
+@traced_rag_node(SPAN_RAG_NODE_SUPERVISOR)
 def node_supervisor(state: RAGState) -> dict:
     """Optionally rewrite the user query before embedding (supervisor LLM).
 
@@ -83,6 +98,7 @@ def node_supervisor(state: RAGState) -> dict:
     return merged
 
 
+@traced_rag_node(SPAN_RAG_NODE_EMBED)
 def node_embed(state: RAGState) -> dict:
     """Embed the query once for dense + sparse retrieval (FR-13).
 
@@ -106,6 +122,7 @@ def node_embed(state: RAGState) -> dict:
     }
 
 
+@traced_rag_node(SPAN_RAG_NODE_SCOPE)
 def node_scope(state: RAGState) -> dict:
     """Resolve which documents to search (explicit pins vs inferred scope).
 
@@ -122,6 +139,7 @@ def node_scope(state: RAGState) -> dict:
     return {**_tick(state, "scope", start), "scope_source": source}
 
 
+@traced_rag_node(SPAN_RAG_NODE_RETRIEVE)
 def node_retrieve(state: RAGState) -> dict:
     """Hybrid dense + sparse retrieval from Qdrant with tenant filter (FR-02).
 
@@ -143,6 +161,7 @@ def node_retrieve(state: RAGState) -> dict:
     return {**_tick(state, "retrieve", start), "retrieved_chunks": chunks}
 
 
+@traced_rag_node(SPAN_RAG_NODE_RERANK)
 def node_rerank(state: RAGState) -> dict:
     """Score retrieved chunks with the cross-encoder reranker; may abstain (FR-08).
 
@@ -177,6 +196,7 @@ def node_rerank(state: RAGState) -> dict:
     return updates
 
 
+@traced_rag_node(SPAN_RAG_NODE_GRAPH)
 def node_graph_enrich(state: RAGState) -> dict:
     """Add Neo4j graph context (sections, cross-refs) to the LLM prompt.
 
@@ -199,6 +219,7 @@ def node_graph_enrich(state: RAGState) -> dict:
     return {**_tick(state, "graph", start), "context_blocks": blocks}
 
 
+@traced_rag_node(SPAN_RAG_NODE_ANSWER)
 def node_answer(state: RAGState) -> dict:
     """Produce the final answer and sources (or abstention message).
 
@@ -307,5 +328,11 @@ async def run_rag_pipeline(initial: RAGState) -> RAGState:
         Merged state after the ``answer`` node, including ``answer_text`` and ``timings_ms``.
     """
     graph = get_rag_graph()
-    result = await graph.ainvoke(initial)
+    with start_span(
+        SPAN_RAG_PIPELINE,
+        tenant_id=initial.get("tenant_id"),
+        collection_id=initial.get("collection_id"),
+        document_id=initial.get("document_id"),
+    ):
+        result = await graph.ainvoke(initial)
     return result  # type: ignore[return-value]

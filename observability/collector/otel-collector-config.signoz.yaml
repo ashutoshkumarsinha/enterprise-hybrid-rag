@@ -45,8 +45,11 @@ processors:
         value: hybrid-rag
         action: upsert
   # OBS-P2: truncate long query attributes before export
-  attributes/truncate:
+  attributes/redact:
     actions:
+      - key: rag.query
+        action: truncate
+        truncated_length: 120
       - key: query
         action: truncate
         truncated_length: 120
@@ -79,7 +82,7 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter, resource, attributes/truncate, batch]
+      processors: [memory_limiter, resource, attributes/redact, batch]
       exporters: [debug, otlp/jaeger, otlp/signoz]
     metrics:
       receivers: [otlp]

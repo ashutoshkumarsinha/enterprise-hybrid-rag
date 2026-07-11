@@ -11,6 +11,13 @@ from app.clients.embed import EmbedClient
 from app.clients.neo4j import Neo4jClient
 from app.clients.qdrant import QdrantClient, retrieve_for_state
 from app.clients.reranker import RerankerClient
+from app.telemetry import (
+    SPAN_INFERENCE_CHAT,
+    SPAN_INFERENCE_EMBED,
+    SPAN_STORE_NEO4J_READ,
+    SPAN_STORE_QDRANT_RETRIEVE,
+    start_span,
+)
 
 _embed: EmbedClient | None = None
 _qdrant: QdrantClient | None = None
@@ -104,16 +111,23 @@ def get_neo4j_client() -> Neo4jClient:
 
 def embed_query(text: str) -> tuple[list[float], dict[str, Any]]:
     client = get_embed_client()
-    dense = run_guarded(get_breakers()["embed"], lambda: client.embed(text))
-    sparse = client.sparse_from_text(text)
+    with start_span(SPAN_INFERENCE_EMBED, model=client.model):
+        dense = run_guarded(get_breakers()["embed"], lambda: client.embed(text))
+        sparse = client.sparse_from_text(text)
     return dense, sparse
 
 
 def retrieve_chunks(state: dict[str, Any]) -> list[dict[str, Any]]:
-    return run_guarded(
-        get_breakers()["qdrant"],
-        lambda: retrieve_for_state(state, get_embed_client(), get_qdrant_client()),
-    )
+    qdrant = get_qdrant_client()
+    with start_span(
+        SPAN_STORE_QDRANT_RETRIEVE,
+        tenant_id=state.get("tenant_id"),
+        search_ef=qdrant.search_ef,
+    ):
+        return run_guarded(
+            get_breakers()["qdrant"],
+            lambda: retrieve_for_state(state, get_embed_client(), qdrant),
+        )
 
 
 def rerank_chunks(query: str, chunks: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[float]]:
@@ -123,7 +137,8 @@ def rerank_chunks(query: str, chunks: list[dict[str, Any]]) -> tuple[list[dict[s
 
 def complete_answer(state: dict[str, Any]) -> tuple[str, bool]:
     client = get_chat_client()
-    return run_guarded(get_breakers()["chat"], lambda: client.complete(state))
+    with start_span(SPAN_INFERENCE_CHAT, model=client.model):
+        return run_guarded(get_breakers()["chat"], lambda: client.complete(state))
 
 
 def supervise_query(state: dict[str, Any]) -> dict[str, Any]:
@@ -141,10 +156,12 @@ def supervise_query(state: dict[str, Any]) -> dict[str, Any]:
 def enrich_graph_blocks(state: dict[str, Any]) -> list[str]:
     from app.graph_enrich import enrich_context_blocks
 
-    return run_guarded(
-        get_breakers()["neo4j"],
-        lambda: enrich_context_blocks(state, get_neo4j_client()),
-    )
+    neo4j = get_neo4j_client()
+    with start_span(SPAN_STORE_NEO4J_READ, tenant_id=state.get("tenant_id"), hop_depth=neo4j.max_section_parents):
+        return run_guarded(
+            get_breakers()["neo4j"],
+            lambda: enrich_context_blocks(state, neo4j),
+        )
 
 
 def reset_clients() -> None:

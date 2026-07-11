@@ -14,6 +14,7 @@ KERNEL_CONTRACT_TESTS: dict[str, str] = {
     "test_research_documents_markdown.py": "query/tests/contract/test_research_documents_markdown.py",
     "test_sse_event_contract.py": "query/tests/contract/test_sse_event_contract.py",
     "test_schema_coverage.py": "query/tests/contract/test_schema_coverage.py",
+    "test_span_catalog.py": "query/tests/contract/test_span_catalog.py",
 }
 
 

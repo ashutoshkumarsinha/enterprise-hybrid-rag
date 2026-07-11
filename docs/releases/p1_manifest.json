@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "updated": "2026-07-11",
+  "items": [
+    {
+      "id": "E-14",
+      "title": "Catalog migrations + runner",
+      "paths": [
+        "ingest/app/migrate.py",
+        "ingest/migrations/001_catalog_v1.sql",
+        "ingest/migrations/002_conversation_sessions_v1.sql",
+        "ingest/migrations/003_mcp_access_tokens_v1.sql",
+        "ingest/migrations/004_grant_query_roles_v1.sql"
+      ],
+      "contract_tests": [
+        "ingest/tests/contract/test_p1_migrations.py",
+        "ingest/tests/contract/test_migrate_discovery.py"
+      ]
+    },
+    {
+      "id": "E-15",
+      "title": "Contract test suite",
+      "paths": [
+        "modules/schemas/",
+        "query/tests/contract/"
+      ],
+      "contract_tests": [
+        "query/tests/contract/test_schema_coverage.py",
+        "query/tests/contract/test_kernel_contract_manifest.py",
+        "query/tests/contract/test_catalog_ro_role.py"
+      ]
+    },
+    {
+      "id": "E-16",
+      "title": "ACL grant API + admin tools",
+      "paths": [
+        "ingest/app/acl_store.py",
+        "ingest/app/acl_handlers.py",
+        "ingest/docs/ADMIN_API.md"
+      ],
+      "contract_tests": [
+        "ingest/tests/contract/test_p1_acl_api.py",
+        "ingest/tests/unit/test_acl_routes.py"
+      ]
+    },
+    {
+      "id": "E-17",
+      "title": "Connector interface v2 (S3 first)",
+      "paths": [
+        "ingest/app/connectors/",
+        "ingest/app/connector_sync.py",
+        "ingest/docs/CONNECTORS.md"
+      ],
+      "contract_tests": [
+        "ingest/tests/contract/test_p1_connector_v2.py",
+        "ingest/tests/unit/test_connectors_s3.py"
+      ]
+    },
+    {
+      "id": "E-18",
+      "title": "mod-chat scaffold",
+      "paths": [
+        "chat-ui/server/",
+        "chat-ui/web/",
+        "chat-ui/README.md"
+      ],
+      "contract_tests": [
+        "ingest/tests/contract/test_chat_ui_scaffold.py"
+      ]
+    },
+    {
+      "id": "E-19",
+      "title": "Helm chart sketch",
+      "paths": [
+        "deploy/helm/hybrid-rag/",
+        "deploy/helm/README.md"
+      ],
+      "contract_tests": [
+        "ingest/tests/contract/test_helm_chart.py"
+      ]
+    }
+  ]
+}

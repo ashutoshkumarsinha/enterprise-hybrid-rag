@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "spec": "ENTERPRISE_HYBRID_RAG_SPEC.md §10.4",
+  "query_spans": [
+    "mcp.sse.connect",
+    "mcp.research_documents",
+    "mcp.authz.check",
+    "session.load_history",
+    "session.append_turn",
+    "http.research_stream",
+    "rag_pipeline",
+    "rag.node.check_cache",
+    "rag.node.supervisor",
+    "rag.node.embed",
+    "rag.node.scope",
+    "rag.node.retrieve",
+    "rag.node.rerank",
+    "rag.node.graph",
+    "rag.node.answer",
+    "store.qdrant.retrieve",
+    "store.neo4j.read",
+    "inference.embed",
+    "inference.chat"
+  ],
+  "ingest_spans": [
+    "ingest.job.batch_write",
+    "ingest.parser.parse_file",
+    "ingest.connector_sync",
+    "ingest.beat.connector_sync"
+  ]
+}

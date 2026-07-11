@@ -29,6 +29,13 @@ def setup_langsmith() -> None:
     _CONFIGURED = True
 
 
+def langsmith_run_names() -> dict[str, str]:
+    """Map LangGraph nodes to LangSmith run names — aligns with OTel ``rag.node.*`` spans."""
+    from app.telemetry import RAG_NODE_SPAN_BY_GRAPH_NODE
+
+    return dict(RAG_NODE_SPAN_BY_GRAPH_NODE)
+
+
 def langsmith_enabled() -> bool:
     return os.environ.get("LANGCHAIN_TRACING_V2", "").lower() in ("true", "1", "yes") and bool(
         os.environ.get("LANGCHAIN_API_KEY", "").strip()

@@ -10,6 +10,21 @@ if TYPE_CHECKING:
 
 _CONFIGURED = False
 
+# E-06 normative ingest span names — ENTERPRISE_HYBRID_RAG_SPEC.md §10.4
+SPAN_JOB_BATCH_WRITE = "ingest.job.batch_write"
+SPAN_PARSER_PARSE_FILE = "ingest.parser.parse_file"
+SPAN_CONNECTOR_SYNC = "ingest.connector_sync"
+SPAN_BEAT_CONNECTOR_SYNC = "ingest.beat.connector_sync"
+
+INGEST_SPAN_CATALOG: frozenset[str] = frozenset(
+    {
+        SPAN_JOB_BATCH_WRITE,
+        SPAN_PARSER_PARSE_FILE,
+        SPAN_CONNECTOR_SYNC,
+        SPAN_BEAT_CONNECTOR_SYNC,
+    }
+)
+
 
 def setup_otel(app: FastAPI | None = None) -> None:
     global _CONFIGURED

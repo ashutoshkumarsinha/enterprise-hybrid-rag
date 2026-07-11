@@ -31,7 +31,7 @@ from app.research_streaming import stream_research_events
 from app.session_prune import prune_sessions
 from app.session_store import create_session_store
 from app.settings import get_settings
-from app.telemetry import get_tracer, setup_otel
+from app.telemetry import SPAN_HTTP_RESEARCH_STREAM, SPAN_MCP_SSE_CONNECT, get_tracer, start_span, setup_otel
 from app.token_store import create_token_store
 from app.warmup_clients import warmup_clients
 
@@ -115,7 +115,7 @@ def healthz():
 
 @app.get("/sse")
 async def mcp_sse() -> StreamingResponse:
-    with tracer.start_as_current_span("mcp.sse.connect"):
+    with start_span(SPAN_MCP_SSE_CONNECT, **{"mcp.transport": "sse"}):
         async def event_stream():
             yield "event: endpoint\ndata: /messages\n\n"
 
@@ -132,9 +132,12 @@ async def research_stream(
     acquire_stream_slot(ctx)
     body = await request.json()
 
-    with tracer.start_as_current_span("mcp.research_stream") as span:
+    with start_span(
+        SPAN_HTTP_RESEARCH_STREAM,
+        tenant_id=ctx.tenant_id,
+        request_id=body.get("request_id"),
+    ) as span:
         query = body.get("query", "")
-        span.set_attribute("module_id", "hybrid-rag-query")
         span.set_attribute("pipeline.engine", "langgraph")
         if query:
             span.set_attribute("rag.query", query[:120])

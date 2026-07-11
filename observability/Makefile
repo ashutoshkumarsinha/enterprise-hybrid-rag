@@ -10,7 +10,7 @@ PUSH     ?= false
 PACKER_ARGS := -var "image_tag=$(IMAGE_TAG)" -var "registry=$(REGISTRY)" -var "push=$(PUSH)"
 PROFILE ?=
 
-.PHONY: up down health logs network synthetic-trace import-signoz validate-prometheus packer-init packer-validate packer-build
+.PHONY: up down health logs network synthetic-trace import-signoz validate-prometheus validate-collector packer-init packer-validate packer-build
 
 network:
 	docker network inspect hybrid-rag-net >/dev/null 2>&1 || docker network create hybrid-rag-net
@@ -48,6 +48,10 @@ validate-prometheus:
 	@docker run --rm -v "$(CURDIR)/collector/prometheus.yml:/etc/prometheus/prometheus.yml:ro" \
 		-v "$(CURDIR)/alerts/prometheus-rules.yaml:/etc/prometheus/alerts/prometheus-rules.yaml:ro" \
 		prom/prometheus:v2.54.1 promtool check config /etc/prometheus/prometheus.yml
+
+validate-collector: ## OBS-P2 contract — truncation processor on all collector profiles
+	@cd ../ingest && PY=$$( [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3 ); \
+	$$PY -m pytest tests/contract/test_infra_otel_collector_truncation.py tests/contract/test_infra_otel_collector_prod.py -q
 
 logs:
 	$(COMPOSE) logs -f --tail=100 otel-collector jaeger

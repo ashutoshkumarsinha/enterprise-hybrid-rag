@@ -14,6 +14,7 @@ from app.rag_state import RAGState
 from app.rbac import require_tool
 from app.session_store import SessionStore
 from app.settings import Settings, get_settings
+from app.telemetry import SPAN_MCP_RESEARCH_DOCUMENTS, SPAN_SESSION_APPEND_TURN, SPAN_SESSION_LOAD_HISTORY, start_span
 
 
 def _tenant_id(ctx: AuthContext, args: dict[str, Any]) -> str:
@@ -35,60 +36,70 @@ async def handle_research_documents(
     tenant_id = _tenant_id(ctx, args)
     session_id = args.get("session_id")
     history: list[dict[str, str]] = []
-    if settings.sessions_enabled and session_id:
-        session = session_store.get_session(
-            session_id, tenant_id=tenant_id, principal=ctx.principal
-        )
-        if session is None and not args.get("create_session_if_missing"):
-            raise HTTPException(status_code=404, detail={"code": "session_not_found"})
-        if session is not None:
-            history = session_store.load_history(
-                session_id,
-                tenant_id=tenant_id,
-                principal=ctx.principal,
-                max_turns=settings.max_history_turns,
-            )
-
-    explicit = bool(args.get("document_id") or args.get("collection_id"))
-    state = RAGState(
-        query=args.get("query", ""),
+    with start_span(
+        SPAN_MCP_RESEARCH_DOCUMENTS,
         tenant_id=tenant_id,
-        collection_id=args.get("collection_id") or "",
-        document_id=args.get("document_id"),
-        version_id=args.get("version_id"),
-        explicit_scope=explicit,
-        skip_supervisor=explicit and settings.skip_supervisor_when_explicit,
-        request_id=args.get("request_id"),
-        langfuse_session_id=args.get("langfuse_session_id") or session_id,
-        langfuse_trace_id=args.get("langfuse_trace_id"),
+        tool="research_documents",
         session_id=session_id,
-        conversation_history=history,
-        graph_enrich_enabled=True,
-        timings_ms={},
-        from_cache=False,
-        abstained=False,
-    )
-    final = await run_rag_pipeline(state)
-    markdown = format_research_markdown(final)
+    ):
+        if settings.sessions_enabled and session_id:
+            with start_span(SPAN_SESSION_LOAD_HISTORY, session_id=session_id) as span:
+                session = session_store.get_session(
+                    session_id, tenant_id=tenant_id, principal=ctx.principal
+                )
+                if session is None and not args.get("create_session_if_missing"):
+                    raise HTTPException(status_code=404, detail={"code": "session_not_found"})
+                if session is not None:
+                    history = session_store.load_history(
+                        session_id,
+                        tenant_id=tenant_id,
+                        principal=ctx.principal,
+                        max_turns=settings.max_history_turns,
+                    )
+                    span.set_attribute("turn_count", len(history))
 
-    if settings.sessions_enabled and session_id and final.get("answer_text"):
-        try:
-            session_store.append_turn(
-                session_id,
-                tenant_id=tenant_id,
-                principal=ctx.principal,
-                user_content=args.get("query", ""),
-                assistant_content=final.get("answer_text", ""),
-                rag_metadata={
-                    "sources": final.get("sources") or [],
-                    "timings_ms": final.get("timings_ms") or {},
-                    "stub": final.get("stub", True),
-                },
-            )
-        except KeyError:
-            raise HTTPException(status_code=404, detail={"code": "session_not_found"}) from None
+        explicit = bool(args.get("document_id") or args.get("collection_id"))
+        state = RAGState(
+            query=args.get("query", ""),
+            tenant_id=tenant_id,
+            collection_id=args.get("collection_id") or "",
+            document_id=args.get("document_id"),
+            version_id=args.get("version_id"),
+            explicit_scope=explicit,
+            skip_supervisor=explicit and settings.skip_supervisor_when_explicit,
+            request_id=args.get("request_id"),
+            langfuse_session_id=args.get("langfuse_session_id") or session_id,
+            langfuse_trace_id=args.get("langfuse_trace_id"),
+            session_id=session_id,
+            conversation_history=history,
+            graph_enrich_enabled=True,
+            timings_ms={},
+            from_cache=False,
+            abstained=False,
+        )
+        final = await run_rag_pipeline(state)
+        markdown = format_research_markdown(final)
 
-    return {"markdown": markdown, "stub": final.get("stub", True)}
+        if settings.sessions_enabled and session_id and final.get("answer_text"):
+            try:
+                with start_span(SPAN_SESSION_APPEND_TURN, session_id=session_id) as span:
+                    session_store.append_turn(
+                        session_id,
+                        tenant_id=tenant_id,
+                        principal=ctx.principal,
+                        user_content=args.get("query", ""),
+                        assistant_content=final.get("answer_text", ""),
+                        rag_metadata={
+                            "sources": final.get("sources") or [],
+                            "timings_ms": final.get("timings_ms") or {},
+                            "stub": final.get("stub", True),
+                        },
+                    )
+                    span.set_attribute("message_count", 2)
+            except KeyError:
+                raise HTTPException(status_code=404, detail={"code": "session_not_found"}) from None
+
+        return {"markdown": markdown, "stub": final.get("stub", True)}
 
 
 def handle_create_session(

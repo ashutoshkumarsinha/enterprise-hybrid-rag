@@ -9,6 +9,7 @@ from fastapi import HTTPException
 
 from app.models import AuthContext
 from app.settings import Settings, get_settings
+from app.telemetry import SPAN_MCP_AUTHZ_CHECK, start_span
 
 TOOL_PERMISSIONS: dict[str, str] = {
     "research_documents": "mcp.research",
@@ -80,8 +81,12 @@ def require_permission(
     *,
     settings: Settings | None = None,
 ) -> None:
-    if not has_permission(ctx, permission, settings=settings):
-        raise HTTPException(status_code=403, detail={"code": "forbidden", "message": permission})
+    with start_span(SPAN_MCP_AUTHZ_CHECK) as span:
+        span.set_attribute("authz.permission", permission)
+        allowed = has_permission(ctx, permission, settings=settings)
+        span.set_attribute("authz.allowed", allowed)
+        if not allowed:
+            raise HTTPException(status_code=403, detail={"code": "forbidden", "message": permission})
 
 
 def require_tool(ctx: AuthContext, tool_name: str, *, settings: Settings | None = None) -> None:

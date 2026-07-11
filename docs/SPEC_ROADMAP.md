@@ -23,16 +23,16 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | **Catalog MCP tools** | **Done v0.30** | `catalog_store.py`, ACL filtering |
 | **benchmark_rag.py (LG-4)** | **Implemented** | `query/benchmarks/` |
 | **migrate.py (E-14)** | **Implemented** | `ingest/app/migrate.py` |
-| **Contract tests** | **71 tests passing** | `query/tests/contract/`, `query/tests/unit/` |
+| **Contract tests** | **51+ query + ingest contract tests** | `query/tests/contract/`, `ingest/tests/contract/` |
 | **GitHub Actions CI** | **Implemented** | `.github/workflows/ci.yml`, `nightly.yml`, `scripts/ci-*.sh` |
 | **Integration tests** | **Implemented** | `query/tests/integration/` (`LIVE_STACK=1`, `.env.live.example`) |
 | **SigNoz APM profile** | **Partial on disk** | §10.5, `observability/docs/SIGNOZ.md` |
 | **Postgres query roles** | **Init script + grants** | `postgres-init.sh`, `004_*`, `infra/docs/POSTGRES.md` |
 | **Root `.gitignore`** | **Done** | secrets, local configs, token files |
-| LangGraph RAG orchestration + LangSmith | **Partial** — real retrieve/answer; graph stub | `query/app/rag_graph.py`, TL-06/07 |
+| LangGraph RAG orchestration + LangSmith | **Done** — full pipeline + OTel span catalog (E-06) | `query/app/rag_graph.py`, `telemetry.py` |
 | Test-driven development | **Normative** | §13.4, §19, `docs/TESTING.md` |
 | Implementation inventory | **Normative** | spec §1.4–1.5, §12.8 |
-| **Ingest parsers / admin API** | **Done v0.49** — full plane + benchmark + Celery poll + backpressure + quotas | Query admission pending |
+| **Ingest parsers / admin API** | **Done v0.49** — full plane + benchmark + Celery poll + backpressure + quotas |
 
 ---
 
@@ -47,7 +47,7 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | E-03 | Sub-project release tag + compatibility matrix | §12.6 | **Done** — `docs/RELEASE_MATRIX.md`, `docs/releases/compatibility.json` |
 | E-04 | Packer / image naming convention | §12.7 | **Done** — `docs/releases/images.json`, `packer/versions.pkrvars.hcl.example` glossary |
 | E-05 | Auth layering: token-first + optional JWT bridge | §7.10, §7.13 | **Done** v0.26 |
-| E-06 | OTel span catalog aligned with Langfuse hierarchy | §10.4 | **Done** — wire in code pending |
+| E-06 | OTel span catalog aligned with Langfuse hierarchy | §10.4 | **Done** — `telemetry.py`, `docs/releases/span_catalog.json`, wired spans |
 | E-07 | Performance guide + baselines | **Done v0.13** | `docs/PERFORMANCE.md` |
 | E-08 | Implementation language stack | **Done v0.14** | spec §1.3 |
 | E-09 | Infra + observability performance plans | **Done v0.14** | sub-project `docs/PERFORMANCE.md` |
@@ -70,12 +70,14 @@ This document is the **living plan** for spec depth, implementation phases, and 
 
 | ID | Enhancement | Deliverable | Status |
 |----|-------------|-------------|--------|
-| E-14 | Catalog migrations + runner | `migrate.py`, `make migrate` | **Done v0.28** |
-| E-15 | Contract test suite | `query/tests/contract/` | **Done** — all 11 kernel schemas + §14 manifest + `query_ro` grants |
-| E-16 | ACL grant API + admin tools | `ingest/app/acl_store.py`, `acl_handlers.py` | **Done v0.34** |
-| E-17 | Connector interface v2 (S3 first) | `ingest/app/connectors/`, `connector_sync.py` | **Done v0.35** |
-| E-18 | mod-chat scaffold (BFF + Keycloak login) | `chat-ui/` | **Done** — Express BFF + React/Vite, OIDC stub |
-| E-19 | Helm chart sketch | `deploy/helm/` | **Done** — `hybrid-rag` chart, HPA, ingress, cronjobs |
+| E-14 | Catalog migrations + runner | `migrate.py`, `make migrate` | **Done** — `001`–`004` + `test_p1_migrations.py` |
+| E-15 | Contract test suite | `query/tests/contract/` | **Done** — 51+ tests, kernel schemas, §14 manifest |
+| E-16 | ACL grant API + admin tools | `ingest/app/acl_store.py`, `acl_handlers.py` | **Done** — `test_p1_acl_api.py` |
+| E-17 | Connector interface v2 (S3 first) | `ingest/app/connectors/`, `connector_sync.py` | **Done** — `test_p1_connector_v2.py` |
+| E-18 | mod-chat scaffold (BFF + Keycloak login) | `chat-ui/` | **Done** — Express BFF + React/Vite, `test_chat_ui_scaffold.py` |
+| E-19 | Helm chart sketch | `deploy/helm/` | **Done** — `hybrid-rag` chart, `test_helm_chart.py`, `make validate-p1` |
+
+**P1 gate:** `make validate-p1` · manifest: `docs/releases/p1_manifest.json`
 
 ### P1.5 — LangGraph implementation (stub → production)
 
@@ -97,7 +99,7 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | INF-P3 | Redis `maxmemory` in compose | infra | **Done** — `REDIS_MAXMEMORY` in compose |
 | INF-P4 | Qdrant gRPC 6334 documented in compose | infra | **Done** — port 6334 + `PREFER_QDRANT_GRPC` |
 | OBS-P1 | Probabilistic trace sampler | observability | **Done** — `collector/otel-collector-config.prod.yaml` |
-| OBS-P2 | Query attribute truncation processor | observability | collector config |
+| OBS-P2 | Query attribute truncation processor | observability | **Done** — `attributes/redact` on dev/prod/signoz collectors |
 | OBS-P3 | `benchmark_rag.py --compare-otel` | query | **Done v0.47** — CI gate < 5% p95 overhead |
 | OBS-P4 | Jaeger persistent storage profile | observability | **Done** — `PROFILE=jaeger-persist`, Badger volume |
 | OBS-P5 | Prometheus SLO alert rules | observability | **Done** — `alerts/prometheus-rules.yaml`, `PROFILE=metrics` |

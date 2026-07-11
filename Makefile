@@ -309,3 +309,7 @@ packer-build-all: ## Build images for every sub-project
 validate-release-matrix: ## Validate index_schema_version + image catalog (E-03/E-04)
 	@PY=$$( [ -x $(QUERY_DIR)/.venv/bin/python ] && echo $(QUERY_DIR)/.venv/bin/python || echo python3 ); \
 	$$PY scripts/validate_release_matrix.py
+
+validate-p1: ## P1 gate — E-14..E-19 deliverables + contracts
+	@chmod +x scripts/validate_p1.sh 2>/dev/null || true
+	@./scripts/validate_p1.sh
