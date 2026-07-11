@@ -18,10 +18,15 @@ except ImportError:
     import tomli as tomllib  # type: ignore
 
 
-def _reverse_proxy_lines(*, upstream: str, indent: str) -> list[str]:
+def _reverse_proxy_lines(
+    *,
+    upstream: str,
+    indent: str,
+    mtls: dict | None = None,
+) -> list[str]:
     pad = indent
     inner = indent + "    "
-    return [
+    lines = [
         f"{pad}reverse_proxy {upstream} {{",
         f"{inner}flush_interval -1",
         f"{inner}header_up X-Forwarded-For {{remote_host}}",
@@ -29,9 +34,38 @@ def _reverse_proxy_lines(*, upstream: str, indent: str) -> list[str]:
         f"{inner}header_up X-Forwarded-Proto {{scheme}}",
         f"{inner}transport http {{",
         f"{inner}    versions 1.1",
-        f"{inner}}}",
-        f"{pad}}}",
     ]
+    if mtls and mtls.get("enabled"):
+        lines.append(f"{inner}    tls")
+        if ca := mtls.get("upstream_ca"):
+            lines.append(f"{inner}    tls_trust_pool file {ca}")
+        cert = mtls.get("upstream_cert")
+        key = mtls.get("upstream_key")
+        if cert and key:
+            lines.append(f"{inner}    tls_client_auth {cert} {key}")
+    lines.extend([f"{inner}}}", f"{pad}}}"])
+    return lines
+
+
+def _site_tls_lines(caddy: dict, mtls: dict) -> list[str]:
+    site = caddy.get("site_name", "localhost")
+    tls = caddy.get("tls", False)
+    email = caddy.get("email", "ops@example.com")
+
+    if mtls.get("client_auth") and mtls.get("client_ca"):
+        issuer = f"tls {email}" if tls and site not in ("localhost", "127.0.0.1") else "tls internal"
+        return [
+            f"    {issuer} {{",
+            "        client_auth {",
+            "            mode require_and_verify",
+            f"            trust_pool file {mtls['client_ca']}",
+            "        }",
+            "    }",
+        ]
+
+    if tls and site not in ("localhost", "127.0.0.1"):
+        return [f"    tls {email}"]
+    return ["    tls internal"]
 
 
 def _auth_gate_lines(*, indent: str, token: str) -> list[str]:
@@ -44,27 +78,23 @@ def _auth_gate_lines(*, indent: str, token: str) -> list[str]:
     ]
 
 
-def render(caddy: dict) -> str:
+def render(caddy: dict, mtls: dict | None = None) -> str:
     site = caddy.get("site_name", "localhost")
-    email = caddy.get("email", "ops@example.com")
-    tls = caddy.get("tls", False)
     mcp_path = caddy.get("mcp_path", "/mcp").rstrip("/")
     research_path = caddy.get("research_stream_path", "/research/stream")
     upstream = caddy.get("mcp_upstream", "127.0.0.1:8010")
     token = caddy.get("mcp_bearer_token", "")
     proxy_research = caddy.get("proxy_research_stream", True)
+    mtls = mtls or {}
 
     lines = ["# Auto-generated — do not edit by hand", f"{site} {{"]
-    if tls and site not in ("localhost", "127.0.0.1"):
-        lines.append(f"    tls {email}")
-    else:
-        lines.append("    tls internal")
+    lines.extend(_site_tls_lines(caddy, mtls))
 
     lines.append("")
     lines.append(f"    handle_path {mcp_path}/* {{")
     if token:
         lines.extend(_auth_gate_lines(indent="        ", token=token))
-    lines.extend(_reverse_proxy_lines(upstream=upstream, indent="        "))
+    lines.extend(_reverse_proxy_lines(upstream=upstream, indent="        ", mtls=mtls))
     lines.append("    }")
 
     if proxy_research:
@@ -72,7 +102,7 @@ def render(caddy: dict) -> str:
         lines.append(f"    handle {research_path} {{")
         if token:
             lines.extend(_auth_gate_lines(indent="        ", token=token))
-        lines.extend(_reverse_proxy_lines(upstream=upstream, indent="        "))
+        lines.extend(_reverse_proxy_lines(upstream=upstream, indent="        ", mtls=mtls))
         lines.append("    }")
 
     lines.append("}")
@@ -91,7 +121,8 @@ def main() -> int:
         print("# proxy_mcp disabled", file=sys.stderr)
         return 1
 
-    content = render(caddy)
+    mtls = data.get("caddy", {}).get("mtls", {})
+    content = render(caddy, mtls)
     if args.write:
         args.write.write_text(content, encoding="utf-8")
         print(f"wrote {args.write}")

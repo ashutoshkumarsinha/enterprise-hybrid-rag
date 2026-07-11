@@ -19,3 +19,6 @@ data:
   MINIO_BUCKET: {{ .Values.stores.minio.bucket | quote }}
   MINIO_BUCKET_STAGING: {{ .Values.stores.minio.bucketStaging | quote }}
   QUERY_BASE_URL: {{ printf "http://%s-query:%v" (include "hybrid-rag.fullname" .) .Values.query.port | quote }}
+  MULTIREGION_ENABLED: {{ .Values.multiRegion.enabled | quote }}
+  MULTIREGION_PRIMARY: {{ .Values.multiRegion.primaryRegion | quote }}
+  CATALOG_REPLICATION_LAG_SLO_SECONDS: {{ .Values.multiRegion.catalogReplicationLagSloSeconds | quote }}

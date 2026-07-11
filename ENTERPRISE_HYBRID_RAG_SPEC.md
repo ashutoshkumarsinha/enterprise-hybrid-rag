@@ -2975,7 +2975,7 @@ Raise container/VM RAM before increasing heap. OOM during ingest → increase Po
 
 **Anti-pattern:** Scaling query replicas without scaling inference or Qdrant — increases admission rejections, not throughput.
 
-**Future (E-24):** Multi-region read path with catalog replication lag SLO < 30s.
+**Future (E-24):** Multi-region read path with catalog replication lag SLO < 30s. Playbook: [`docs/MULTI_REGION.md`](./docs/MULTI_REGION.md).
 
 ### 12.8 Capacity planning worksheet
 

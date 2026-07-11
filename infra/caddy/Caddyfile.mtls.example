@@ -1,0 +1,41 @@
+# E-34 mTLS edge profile — render with scripts/render_caddyfile.py when [caddy.mtls] enabled
+# INF-P4: flush_interval -1 on all SSE/streaming routes
+
+rag.example.com {
+    tls ops@example.com {
+        client_auth {
+            mode require_and_verify
+            trust_pool file /etc/caddy/certs/client-ca.crt
+        }
+    }
+
+    handle_path /mcp/* {
+        reverse_proxy https://query:8010 {
+            flush_interval -1
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            transport http {
+                versions 1.1
+                tls
+                tls_trust_pool file /etc/caddy/certs/ca.crt
+                tls_client_auth /etc/caddy/certs/caddy-client.crt /etc/caddy/certs/caddy-client.key
+            }
+        }
+    }
+
+    handle /research/stream {
+        reverse_proxy https://query:8010 {
+            flush_interval -1
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            transport http {
+                versions 1.1
+                tls
+                tls_trust_pool file /etc/caddy/certs/ca.crt
+                tls_client_auth /etc/caddy/certs/caddy-client.crt /etc/caddy/certs/caddy-client.key
+            }
+        }
+    }
+}

@@ -108,17 +108,19 @@ This document is the **living plan** for spec depth, implementation phases, and 
 
 | ID | Enhancement | Notes |
 |----|-------------|-------|
-| E-34 | mTLS between tiers | infra Caddy + service mesh option |
+| E-34 | mTLS between tiers | **Done** — `infra/docs/MTLS.md`, `render_caddyfile.py` mTLS, `test_p2_mtls.py` |
 | E-21 | Tenant offboarding automation | **Done** — `tenant_purge.py`, `POST /admin/tenants/{id}/purge`, `make purge-tenant` |
 | E-22 | Version retention job | **Done** — `version_prune.py`, Qdrant + Neo4j + catalog prune, `make prune-versions` |
 | E-23 | SigNoz dashboards as code | **Done** — `scripts/import_signoz.py`, dashboard stubs, `signoz-rules.yaml` |
 | E-44 | Session retention prune job | **Done** — `session_prune.py`, `POST /admin/sessions/prune`, `make prune-sessions` |
-| E-24 | Multi-region read replica story | spec §12.4 expansion |
-| E-25 | Embedding dimension migration playbook | resolves OQ2 |
+| E-24 | Multi-region read replica story | **Done** — `docs/MULTI_REGION.md`, Helm `multiRegion`, `test_p2_multi_region.py` |
+| E-25 | Embedding dimension migration playbook | **Done** — `docs/EMBED_DIMENSION_MIGRATION.md`, `migrate_embed_dimension.py`, `test_p2_embed_migration.py` |
 | E-26 | Chaos test suite automation | **Done** — `scripts/chaos/`, `make chaos-staging`, monthly workflow |
 | E-27 | Tenant quota admin API | `PUT /admin/tenants/{id}/quotas` | **Done v0.49** (ingest) |
 | E-28 | Circuit breaker implementation | query `client_factory.py` | **Done v0.31** |
 | E-29 | Load test harness (`load_test.py`) | k6/locust wrapper | **Done v0.48** |
+
+**P2 gate:** `make validate-p2` · manifest: `docs/releases/p2_manifest.json`
 
 ### P3 — Advanced product
 

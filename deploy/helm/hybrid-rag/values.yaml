@@ -119,3 +119,10 @@ cronJobs:
 serviceAccount:
   create: true
   name: ""
+
+# E-24 multi-region read path — see docs/MULTI_REGION.md
+multiRegion:
+  enabled: false
+  primaryRegion: us-east-1
+  readRegions: []
+  catalogReplicationLagSloSeconds: 30

@@ -24,4 +24,8 @@ echo "==> P1 gate (E-14..E-19)"
 chmod +x scripts/validate_p1.sh 2>/dev/null || true
 ./scripts/validate_p1.sh
 
+echo "==> P2 gate (E-34, E-24, E-25 + manifest)"
+chmod +x scripts/validate_p2.sh scripts/migrate_embed_dimension.py 2>/dev/null || true
+./scripts/validate_p2.sh
+
 echo "PR unit+contract OK"

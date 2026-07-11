@@ -313,3 +313,12 @@ validate-release-matrix: ## Validate index_schema_version + image catalog (E-03/
 validate-p1: ## P1 gate — E-14..E-19 deliverables + contracts
 	@chmod +x scripts/validate_p1.sh 2>/dev/null || true
 	@./scripts/validate_p1.sh
+
+validate-p2: ## P2 gate — E-34/E-24/E-25 + enterprise hardening manifest
+	@chmod +x scripts/validate_p2.sh scripts/migrate_embed_dimension.py 2>/dev/null || true
+	@./scripts/validate_p2.sh
+
+validate-embed-dimension: ## E-25 embed_dimension consistency check
+	@PY=$$( [ -x $(INGEST_DIR)/.venv/bin/python ] && echo $(INGEST_DIR)/.venv/bin/python || echo python3 ); \
+	chmod +x scripts/migrate_embed_dimension.py 2>/dev/null || true; \
+	$$PY scripts/migrate_embed_dimension.py --dry-run

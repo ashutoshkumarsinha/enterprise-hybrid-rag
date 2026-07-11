@@ -85,7 +85,13 @@ make render-caddy
 
 ---
 
-## 7. Troubleshooting
+## 7. mTLS (E-34)
+
+Upstream and edge client-certificate auth: [`MTLS.md`](./MTLS.md). Enable `[caddy.mtls]` in `config/infra.toml` and `make render-caddy`.
+
+---
+
+## 8. Troubleshooting
 
 | Symptom | Fix |
 |---------|-----|

@@ -35,6 +35,14 @@ modChat:
   enabled: true
   authStub: false
 
+multiRegion:
+  enabled: true
+  primaryRegion: us-east-1
+  readRegions:
+    - name: eu-west-1
+      queryReplicaCount: 3
+  catalogReplicationLagSloSeconds: 30
+
 ingress:
   host: rag.prod.example.com
 

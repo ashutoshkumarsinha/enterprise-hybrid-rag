@@ -71,6 +71,15 @@ proxy_research_stream = true
 research_stream_path = "/research/stream"
 mcp_bearer_token = ""
 
+# E-34 upstream mTLS (Caddy → hybrid-rag-query). See infra/docs/MTLS.md
+[caddy.mtls]
+enabled = false
+upstream_ca = "/etc/caddy/certs/ca.crt"
+upstream_cert = "/etc/caddy/certs/caddy-client.crt"
+upstream_key = "/etc/caddy/certs/caddy-client.key"
+client_auth = false
+client_ca = "/etc/caddy/certs/client-ca.crt"
+
 [performance]
 profile = "dev"                    # dev | prod_500k | prod_2m
 qdrant_grpc_port = 6334

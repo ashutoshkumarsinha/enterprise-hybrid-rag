@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "updated": "2026-07-11",
+  "items": [
+    {
+      "id": "E-34",
+      "title": "mTLS between tiers",
+      "paths": [
+        "infra/docs/MTLS.md",
+        "infra/caddy/Caddyfile.mtls.example",
+        "infra/scripts/render_caddyfile.py"
+      ],
+      "contract_tests": [
+        "ingest/tests/contract/test_p2_mtls.py",
+        "ingest/tests/contract/test_infra_caddyfile.py"
+      ]
+    },
+    {
+      "id": "E-21",
+      "title": "Tenant offboarding automation",
+      "paths": [
+        "ingest/app/tenant_purge.py"
+      ],
+      "contract_tests": [
+        "ingest/tests/contract/test_tenant_purge.py"
+      ]
+    },
+    {
+      "id": "E-22",
+      "title": "Version retention job",
+      "paths": [
+        "ingest/app/version_prune.py"
+      ],
+      "contract_tests": [
+        "ingest/tests/unit/test_version_prune.py"
+      ]
+    },
+    {
+      "id": "E-23",
+      "title": "SigNoz dashboards as code",
+      "paths": [
+        "observability/scripts/import_signoz.py"
+      ],
+      "contract_tests": [
+        "ingest/tests/contract/test_signoz_import.py"
+      ]
+    },
+    {
+      "id": "E-44",
+      "title": "Session retention prune job",
+      "paths": [
+        "query/app/session_prune.py"
+      ],
+      "contract_tests": [
+        "query/tests/unit/test_session_prune.py"
+      ]
+    },
+    {
+      "id": "E-24",
+      "title": "Multi-region read replica story",
+      "paths": [
+        "docs/MULTI_REGION.md",
+        "deploy/helm/hybrid-rag/values.yaml"
+      ],
+      "contract_tests": [
+        "ingest/tests/contract/test_p2_multi_region.py"
+      ]
+    },
+    {
+      "id": "E-25",
+      "title": "Embedding dimension migration playbook",
+      "paths": [
+        "docs/EMBED_DIMENSION_MIGRATION.md",
+        "scripts/migrate_embed_dimension.py"
+      ],
+      "contract_tests": [
+        "ingest/tests/contract/test_p2_embed_migration.py"
+      ]
+    },
+    {
+      "id": "E-26",
+      "title": "Chaos test suite automation",
+      "paths": [
+        "scripts/chaos/chaos_suite.py",
+        "scripts/run-chaos.sh"
+      ],
+      "contract_tests": [
+        "ingest/tests/contract/test_chaos_suite.py"
+      ]
+    },
+    {
+      "id": "E-27",
+      "title": "Tenant quota admin API",
+      "paths": [
+        "ingest/app/quota_handlers.py"
+      ],
+      "contract_tests": [
+        "ingest/tests/unit/test_quota_store.py"
+      ]
+    },
+    {
+      "id": "E-28",
+      "title": "Circuit breaker implementation",
+      "paths": [
+        "query/app/circuit_breaker.py",
+        "query/app/client_factory.py"
+      ],
+      "contract_tests": [
+        "query/tests/unit/test_circuit_breaker.py"
+      ]
+    },
+    {
+      "id": "E-29",
+      "title": "Load test harness",
+      "paths": [
+        "query/benchmarks/load_test.py"
+      ],
+      "contract_tests": [
+        "query/tests/unit/test_load_test.py"
+      ]
+    }
+  ]
+}
