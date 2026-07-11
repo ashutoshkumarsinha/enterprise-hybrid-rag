@@ -10,6 +10,12 @@
     "query": { "type": "string", "minLength": 1, "maxLength": 8000 },
     "tenant_id": { "type": "string", "minLength": 1 },
     "collection_id": { "type": "string" },
+    "additional_collection_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "maxItems": 8,
+      "description": "E-30 cross-collection scope; merged with collection_id"
+    },
     "document_id": { "type": "string" },
     "version_id": { "type": "string" },
     "tags": { "type": "array", "items": { "type": "string" }, "maxItems": 32 },

@@ -124,12 +124,14 @@ This document is the **living plan** for spec depth, implementation phases, and 
 
 ### P3 — Advanced product
 
-| ID | Enhancement | Phase |
+| ID | Enhancement | Notes |
 |----|-------------|-------|
-| E-30 | Cross-collection queries | P5 |
-| E-31 | Confluence / SharePoint connectors | P5 |
-| E-32 | Federated MCP (multi-region catalog) | OQ3 |
-| E-33 | Per-tenant Qdrant collections (regulated tier) | OD1 variant |
+| E-30 | Cross-collection queries | **Done** — `additional_collection_ids`, `docs/CROSS_COLLECTION_QUERIES.md`, `test_p3_cross_collection.py` |
+| E-31 | Confluence / SharePoint connectors | **Done** — `connectors/sharepoint.py`, `confluence.py`, `test_p3_connectors.py` |
+| E-32 | Federated MCP (multi-region catalog) | **Done** — `docs/FEDERATED_MCP.md`, `federated_catalog.py`, Helm `federatedMcp` |
+| E-33 | Per-tenant Qdrant collections (regulated tier) | **Done** — migration 005, `qdrant_collection.py`, `docs/REGULATED_TENANT_QDRANT.md` |
+
+**P3 gate:** `make validate-p3` · manifest: `docs/releases/p3_manifest.json`
 
 ---
 

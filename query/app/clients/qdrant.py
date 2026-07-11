@@ -9,6 +9,7 @@ import os
 from typing import Any
 
 from app.clients.embed import EmbedClient
+from app.qdrant_collection import resolve_qdrant_collection
 
 
 class QdrantClient:
@@ -29,6 +30,7 @@ class QdrantClient:
         self.collection = collection or os.environ.get(
             "QDRANT_COLLECTION", "enterprise_hybrid_rag"
         )
+        self._base_collection = self.collection
         prefer = prefer_grpc if prefer_grpc is not None else os.environ.get(
             "PREFER_QDRANT_GRPC", ""
         ).lower() in ("true", "1", "yes")
@@ -74,6 +76,7 @@ class QdrantClient:
         sparse_indices: list[int],
         sparse_values: list[float],
         collection_id: str | None = None,
+        additional_collection_ids: list[str] | None = None,
         document_id: str | None = None,
         version_id: str | None = None,
         limit: int | None = None,
@@ -83,19 +86,29 @@ class QdrantClient:
         assert self._client is not None
         from qdrant_client import models
 
+        physical = resolve_qdrant_collection(tenant_id=tenant_id, base=self._base_collection)
         must: list[models.FieldCondition] = [
             models.FieldCondition(
                 key="tenant_id",
                 match=models.MatchValue(value=tenant_id),
             )
         ]
-        if collection_id:
-            must.append(
-                models.FieldCondition(
-                    key="collection_id",
-                    match=models.MatchValue(value=collection_id),
+        scope_ids = _scope_collection_ids(collection_id, additional_collection_ids)
+        if scope_ids:
+            if len(scope_ids) == 1:
+                must.append(
+                    models.FieldCondition(
+                        key="collection_id",
+                        match=models.MatchValue(value=scope_ids[0]),
+                    )
                 )
-            )
+            else:
+                must.append(
+                    models.FieldCondition(
+                        key="collection_id",
+                        match=models.MatchAny(any=scope_ids),
+                    )
+                )
         if document_id:
             must.append(
                 models.FieldCondition(
@@ -113,7 +126,7 @@ class QdrantClient:
         query_filter = models.Filter(must=must)
         sparse = models.SparseVector(indices=sparse_indices, values=sparse_values)
         result = self._client.query_points(
-            collection_name=self.collection,
+            collection_name=physical,
             prefetch=[
                 models.Prefetch(query=dense_vector, limit=self.recall_limit * 2),
                 models.Prefetch(
@@ -129,6 +142,19 @@ class QdrantClient:
             with_payload=True,
         )
         return [_point_to_chunk(point) for point in result.points]
+
+
+def _scope_collection_ids(
+    collection_id: str | None,
+    additional_collection_ids: list[str] | None,
+) -> list[str]:
+    ids: list[str] = []
+    if collection_id:
+        ids.append(collection_id)
+    for item in additional_collection_ids or []:
+        if item and item not in ids:
+            ids.append(item)
+    return ids
 
 
 def _point_to_chunk(point: Any) -> dict[str, Any]:
@@ -196,6 +222,7 @@ def retrieve_for_state(
         sparse_indices=sparse["indices"],
         sparse_values=sparse["values"],
         collection_id=state.get("collection_id") or None,
+        additional_collection_ids=state.get("additional_collection_ids"),
         document_id=state.get("document_id"),
         version_id=state.get("version_id"),
     )

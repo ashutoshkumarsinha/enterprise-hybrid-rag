@@ -43,6 +43,12 @@ multiRegion:
       queryReplicaCount: 3
   catalogReplicationLagSloSeconds: 30
 
+federatedMcp:
+  enabled: true
+  region: eu-west-1
+  peerEndpoints:
+    us-east-1: https://query.us-east-1.example.com:8010
+
 ingress:
   host: rag.prod.example.com
 

@@ -58,11 +58,14 @@ async def handle_research_documents(
                     )
                     span.set_attribute("turn_count", len(history))
 
-        explicit = bool(args.get("document_id") or args.get("collection_id"))
+        explicit = bool(
+            args.get("document_id") or args.get("collection_id") or args.get("additional_collection_ids")
+        )
         state = RAGState(
             query=args.get("query", ""),
             tenant_id=tenant_id,
             collection_id=args.get("collection_id") or "",
+            additional_collection_ids=list(args.get("additional_collection_ids") or []),
             document_id=args.get("document_id"),
             version_id=args.get("version_id"),
             explicit_scope=explicit,

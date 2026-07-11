@@ -119,4 +119,4 @@ No change to write DSNs. Connector sync and Celery workers run **only** in the p
 
 ## 6. Future (E-32)
 
-Federated MCP (OQ3) extends this story with a global catalog routing layer. E-24 covers **read replica placement** only.
+Federated MCP catalog routing is implemented — see [`docs/FEDERATED_MCP.md`](./FEDERATED_MCP.md). E-24 covers **read replica placement**; E-32 adds **cross-region catalog tool federation**.

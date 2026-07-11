@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "updated": "2026-07-11",
+  "items": [
+    {
+      "id": "E-30",
+      "title": "Cross-collection queries",
+      "paths": [
+        "docs/CROSS_COLLECTION_QUERIES.md",
+        "query/app/clients/qdrant.py",
+        "modules/schemas/mcp_research_documents.input.v1.json"
+      ],
+      "contract_tests": [
+        "ingest/tests/contract/test_p3_cross_collection.py"
+      ]
+    },
+    {
+      "id": "E-31",
+      "title": "Confluence / SharePoint connectors",
+      "paths": [
+        "ingest/app/connectors/sharepoint.py",
+        "ingest/app/connectors/confluence.py",
+        "ingest/docs/CONNECTORS.md"
+      ],
+      "contract_tests": [
+        "ingest/tests/contract/test_p3_connectors.py"
+      ]
+    },
+    {
+      "id": "E-32",
+      "title": "Federated MCP (multi-region catalog)",
+      "paths": [
+        "docs/FEDERATED_MCP.md",
+        "query/app/federated_catalog.py"
+      ],
+      "contract_tests": [
+        "ingest/tests/contract/test_p3_federated_mcp.py"
+      ]
+    },
+    {
+      "id": "E-33",
+      "title": "Per-tenant Qdrant collections (regulated tier)",
+      "paths": [
+        "docs/REGULATED_TENANT_QDRANT.md",
+        "ingest/migrations/005_tenant_qdrant_suffix_v1.sql",
+        "ingest/app/qdrant_collection.py",
+        "query/app/qdrant_collection.py"
+      ],
+      "contract_tests": [
+        "ingest/tests/contract/test_p3_regulated_qdrant.py"
+      ]
+    }
+  ]
+}

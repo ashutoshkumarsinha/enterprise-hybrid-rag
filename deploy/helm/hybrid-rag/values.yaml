@@ -126,3 +126,9 @@ multiRegion:
   primaryRegion: us-east-1
   readRegions: []
   catalogReplicationLagSloSeconds: 30
+
+# E-32 federated MCP — see docs/FEDERATED_MCP.md
+federatedMcp:
+  enabled: false
+  region: us-east-1
+  peerEndpoints: {}

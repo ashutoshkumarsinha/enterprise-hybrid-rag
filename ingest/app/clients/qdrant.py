@@ -7,6 +7,8 @@ from typing import Any
 
 from qdrant_client import models
 
+from app.qdrant_collection import resolve_qdrant_collection
+
 _INDEX_FIELDS = (
     "tenant_id",
     "collection_id",
@@ -34,6 +36,7 @@ class QdrantWriter:
         self.collection = collection or os.environ.get(
             "QDRANT_COLLECTION", "enterprise_hybrid_rag"
         )
+        self._base_collection = self.collection
         prefer = prefer_grpc if prefer_grpc is not None else os.environ.get(
             "PREFER_QDRANT_GRPC", ""
         ).lower() in ("true", "1", "yes")
@@ -81,10 +84,12 @@ class QdrantWriter:
         """Upsert points; returns count accepted."""
         if not chunks:
             return 0
+        tenant_id = str(chunks[0].get("tenant_id", ""))
+        physical = resolve_qdrant_collection(tenant_id=tenant_id, base=self._base_collection)
         if self._stub:
             return len(chunks)
         assert self._client is not None
-        self._ensure_payload_indexes()
+        self._ensure_payload_indexes(physical)
         written = 0
         for start in range(0, len(chunks), self.upsert_batch):
             batch_chunks = chunks[start : start + self.upsert_batch]
@@ -104,18 +109,19 @@ class QdrantWriter:
                 )
                 for chunk, dense, sparse in zip(batch_chunks, batch_dense, batch_sparse, strict=True)
             ]
-            self._client.upsert(collection_name=self.collection, points=points, wait=False)
+            self._client.upsert(collection_name=physical, points=points, wait=False)
             written += len(points)
         return written
 
-    def _ensure_payload_indexes(self) -> None:
+    def _ensure_payload_indexes(self, collection_name: str | None = None) -> None:
+        target = collection_name or self.collection
         if self._indexes_ensured or self._stub:
             return
         assert self._client is not None
         for field in _INDEX_FIELDS:
             try:
                 self._client.create_payload_index(
-                    collection_name=self.collection,
+                    collection_name=target,
                     field_name=field,
                     field_schema=models.PayloadSchemaType.KEYWORD,
                 )
@@ -136,8 +142,9 @@ class QdrantWriter:
         if self._stub:
             return int(expected_points or 0)
         assert self._client is not None
+        physical = resolve_qdrant_collection(tenant_id=tenant_id, base=self._base_collection)
         self._client.delete(
-            collection_name=self.collection,
+            collection_name=physical,
             points_selector=models.FilterSelector(
                 filter=models.Filter(
                     must=[
@@ -169,8 +176,9 @@ class QdrantWriter:
         if self._stub:
             return int(expected_points or 0)
         assert self._client is not None
+        physical = resolve_qdrant_collection(tenant_id=tenant_id, base=self._base_collection)
         self._client.delete(
-            collection_name=self.collection,
+            collection_name=physical,
             points_selector=models.FilterSelector(
                 filter=models.Filter(
                     must=[

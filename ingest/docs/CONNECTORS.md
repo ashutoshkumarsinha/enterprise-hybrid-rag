@@ -19,6 +19,8 @@ class Connector(Protocol):
 | Confluence | P3 | API token | Page tree → documents |
 | Google Drive | P3 | OAuth | Shared drives |
 
+**E-31:** `sharepoint` and `confluence` connectors ship stub-first (`CONNECTOR_STUB=true`). Production uses OAuth / API token env vars — see `ingest/app/connectors/sharepoint.py` and `confluence.py`.
+
 ## Config (`config/ingest.toml`)
 
 ```toml
@@ -26,6 +28,7 @@ class Connector(Protocol):
 filesystem_enabled = true
 s3_enabled = false
 sharepoint_enabled = false
+confluence_enabled = false
 connector_sync_interval_minutes = 60
 ```
 

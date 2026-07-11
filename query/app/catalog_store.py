@@ -452,5 +452,11 @@ class PostgresCatalogStore(CatalogStore):
 def create_catalog_store(settings: Settings | None = None) -> CatalogStore:
     settings = settings or get_settings()
     if settings.catalog_dsn_ro:
-        return PostgresCatalogStore(settings.catalog_dsn_ro)
-    return InMemoryCatalogStore()
+        local = PostgresCatalogStore(settings.catalog_dsn_ro)
+    else:
+        local = InMemoryCatalogStore()
+    from app.federated_catalog import FederatedCatalogStore, federated_mcp_enabled
+
+    if federated_mcp_enabled():
+        return FederatedCatalogStore(local)
+    return local

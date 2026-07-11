@@ -64,9 +64,11 @@ def _stub_mode() -> bool:
 
 
 def cache_key(state: dict[str, Any]) -> str:
+    extra = ",".join(sorted(state.get("additional_collection_ids") or []))
     parts = [
         state.get("tenant_id", ""),
         state.get("collection_id", ""),
+        extra,
         state.get("document_id") or "",
         state.get("version_id") or "",
         state.get("query", ""),

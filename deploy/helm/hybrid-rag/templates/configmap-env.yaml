@@ -22,3 +22,6 @@ data:
   MULTIREGION_ENABLED: {{ .Values.multiRegion.enabled | quote }}
   MULTIREGION_PRIMARY: {{ .Values.multiRegion.primaryRegion | quote }}
   CATALOG_REPLICATION_LAG_SLO_SECONDS: {{ .Values.multiRegion.catalogReplicationLagSloSeconds | quote }}
+  FEDERATED_MCP_ENABLED: {{ .Values.federatedMcp.enabled | quote }}
+  MCP_REGION: {{ .Values.federatedMcp.region | quote }}
+  MCP_PEER_ENDPOINTS_JSON: {{ .Values.federatedMcp.peerEndpoints | toJson | quote }}

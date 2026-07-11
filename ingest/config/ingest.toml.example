@@ -70,6 +70,7 @@ redis_url = "redis://redis:6379/0"
 filesystem_enabled = true
 s3_enabled = false
 sharepoint_enabled = false
+confluence_enabled = false
 connector_sync_interval_minutes = 60
 
 [models]

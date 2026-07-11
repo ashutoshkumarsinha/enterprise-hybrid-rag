@@ -318,6 +318,10 @@ validate-p2: ## P2 gate — E-34/E-24/E-25 + enterprise hardening manifest
 	@chmod +x scripts/validate_p2.sh scripts/migrate_embed_dimension.py 2>/dev/null || true
 	@./scripts/validate_p2.sh
 
+validate-p3: ## P3 gate — E-30..E-33 advanced product deliverables
+	@chmod +x scripts/validate_p3.sh 2>/dev/null || true
+	@./scripts/validate_p3.sh
+
 validate-embed-dimension: ## E-25 embed_dimension consistency check
 	@PY=$$( [ -x $(INGEST_DIR)/.venv/bin/python ] && echo $(INGEST_DIR)/.venv/bin/python || echo python3 ); \
 	chmod +x scripts/migrate_embed_dimension.py 2>/dev/null || true; \

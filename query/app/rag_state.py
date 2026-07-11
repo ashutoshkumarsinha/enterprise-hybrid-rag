@@ -22,6 +22,7 @@ class RAGState(TypedDict, total=False):
         query: Natural-language question from the user.
         tenant_id: Organization partition; required for ACL and Qdrant filter (FR-02).
         collection_id: Corpus to search within the tenant.
+        additional_collection_ids: Extra corpora for cross-collection search (E-30).
         document_id: Optional pin to a single document.
         version_id: Optional pin to one immutable ingest version.
         explicit_scope: True when the client pinned collection/document (skips supervisor).
@@ -55,6 +56,7 @@ class RAGState(TypedDict, total=False):
     query: str
     tenant_id: str
     collection_id: str
+    additional_collection_ids: list[str]
     document_id: str | None
     version_id: str | None
     explicit_scope: bool

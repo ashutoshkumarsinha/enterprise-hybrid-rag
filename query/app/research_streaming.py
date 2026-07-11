@@ -39,11 +39,14 @@ def state_from_request(
             max_turns=settings.max_history_turns,
         )
 
-    explicit = bool(body.get("document_id") or body.get("collection_id"))
+    explicit = bool(
+        body.get("document_id") or body.get("collection_id") or body.get("additional_collection_ids")
+    )
     return RAGState(
         query=body.get("query", ""),
         tenant_id=tenant_id,
         collection_id=body.get("collection_id", ""),
+        additional_collection_ids=list(body.get("additional_collection_ids") or []),
         document_id=body.get("document_id"),
         version_id=body.get("version_id"),
         explicit_scope=explicit,
