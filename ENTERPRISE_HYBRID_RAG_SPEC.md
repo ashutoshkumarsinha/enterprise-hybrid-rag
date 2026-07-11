@@ -157,7 +157,7 @@ flowchart LR
 | Sub-project | Docs | Compose / ops | Application code | Tests / schemas |
 |-------------|------|---------------|------------------|-----------------|
 | **query** | **Complete** — `SPEC.md`, 9× `docs/` (incl. RBAC, SESSIONS, TOKEN_ADMIN, MCP stdio) | `compose/`, `Makefile`, `Dockerfile` | **rag-v1.0 candidate** — full LangGraph path + supervisor + breakers + events + ACL cache | **71 contract/unit tests** |
-| **ingest** | **Complete** — `SPEC.md`, 7× `docs/` (incl. MIGRATIONS) | `compose/`, worker `Dockerfile` | **v0.45** — ingest plane + Celery job poll | **49 contract/unit tests**; migrations 001–004 |
+| **ingest** | **Complete** — `SPEC.md`, 7× `docs/` (incl. MIGRATIONS) | `compose/`, worker `Dockerfile` | **v0.46** — ingest plane + backpressure | **53 contract/unit tests**; migrations 001–004 |
 | **infra** | **Complete** — `SPEC.md`, 9× `docs/` | Full store compose; Qdrant gRPC **6334** | **Partial** — `init-db.sh`, `init-minio.sh`, `postgres-init.sh` (4 catalog roles), `healthcheck.sh`, `backup.sh`, `render_caddyfile.py`, `hybrid-rag-realm.json` | No `postgres-catalog-indexes.sql` (INF-P2) |
 | **inference** | **Complete** — `SPEC.md`, 7× `docs/` | vLLM `v0.6.6` compose profiles | **Partial** — `reranker/sidecar.py` working minimal `/predict`; vLLM upstream images | Smoke scripts only |
 | **observability** | **Complete** — `SPEC.md`, 6× `docs/` + **§10.5 SigNoz** | Dev collector + Jaeger + Langfuse compose; `PROFILE=signoz` sidecar | **Partial** — SigNoz dashboard stubs, `otel-collector-config.signoz.yaml`, `signoz-rules.yaml` | No `otel-collector-config.prod.yaml` (OBS-P1) |
@@ -187,7 +187,7 @@ flowchart LR
 | `ingest/app/writers.py`, `clients/embed.py`, `clients/qdrant.py`, `clients/neo4j.py` | Implemented v0.33 | Batch embed + Qdrant upsert + Neo4j merge (stub tier) |
 | `ingest/app/acl_store.py`, `acl_handlers.py` | Implemented v0.34 | ACL grant CRUD + collection `default_acl` admin |
 | `ingest/app/connectors/`, `connector_sync.py` | Implemented v0.35 | S3/MinIO + filesystem connector sync |
-| `ingest/app/job_store.py`, `job_handlers.py`, `celery_results.py` | Implemented v0.45 | Job poll API + Celery result backend reconcile |
+| `ingest/app/backpressure.py` | Implemented v0.46 | FR-29 Celery queue depth warn + enqueue pause (503) |
 | `ingest/app/beat_config.py`, `connector_enqueue.py` | Implemented v0.40 | Celery beat schedule + shared connector enqueue |
 | `ingest/app/catalog_store.py` | Implemented v0.41 | Postgres/in-memory `documents` + `document_versions` on write |
 | `ingest/benchmarks/benchmark_ingest.py` | Implemented v0.44 | Mock + live throughput gates (§13.1) |

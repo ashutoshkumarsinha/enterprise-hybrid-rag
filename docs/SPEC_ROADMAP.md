@@ -32,7 +32,7 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | LangGraph RAG orchestration + LangSmith | **Partial** — real retrieve/answer; graph stub | `query/app/rag_graph.py`, TL-06/07 |
 | Test-driven development | **Normative** | §13.4, §19, `docs/TESTING.md` |
 | Implementation inventory | **Normative** | spec §1.4–1.5, §12.8 |
-| **Ingest parsers / admin API** | **Done v0.45** — full plane + benchmark + Celery job poll | — |
+| **Ingest parsers / admin API** | **Done v0.46** — full plane + benchmark + Celery poll + backpressure | — |
 
 ---
 

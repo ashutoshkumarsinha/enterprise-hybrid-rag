@@ -14,6 +14,7 @@ from app.acl_handlers import (
     patch_collection_default_acl,
 )
 from app.acl_store import get_acl_store
+from app.backpressure import assert_enqueue_allowed, check_backpressure
 from app.catalog_store import get_catalog_store
 from app.connector_handlers import enqueue_collection_sync
 from app.job_handlers import get_job_status
@@ -23,7 +24,7 @@ from app.pipeline import parse_document
 from app.tasks import batch_write
 from app.telemetry import get_tracer, setup_otel
 
-app = FastAPI(title="hybrid-rag-ingest-orchestrator", version="0.9.0-celery-poll")
+app = FastAPI(title="hybrid-rag-ingest-orchestrator", version="0.10.0-backpressure")
 setup_otel(app)
 tracer = get_tracer()
 
@@ -40,6 +41,7 @@ def healthz() -> dict:
             "module": "hybrid-rag-ingest",
             "stub": False,
             "parser_profile": _parser_profile(),
+            "backpressure": check_backpressure().as_dict(),
             "checks": {
                 "celery_ok": True,
                 "redis_broker_ok": True,
@@ -70,6 +72,7 @@ async def connectors_sync(request: Request) -> dict:
 @app.post("/admin/ingest/document")
 async def ingest_document(request: Request) -> dict:
     """Parse a local file and enqueue ``batch_write`` with chunk payloads."""
+    assert_enqueue_allowed()
     body = await request.json()
     path = body.get("path")
     tenant_id = body.get("tenant_id")
