@@ -30,6 +30,7 @@ def batch_write(chunks: list | None = None) -> dict:
         result = write_chunks(payload)
         span.set_attribute("ingest.written", result.get("written", 0))
         span.set_attribute("ingest.validated", result.get("validated", 0))
+        span.set_attribute("ingest.skipped_dedup", result.get("skipped_dedup", 0))
         return result
 
 

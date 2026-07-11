@@ -34,6 +34,10 @@ def test_write_chunks_live_stub_stores() -> None:
     os.environ["EMBED_STUB"] = "true"
     os.environ["QDRANT_STUB"] = "true"
     os.environ["NEO4J_STUB"] = "true"
+    os.environ["DEDUP_ENABLED"] = "true"
+    from app.dedup_store import reset_dedup_store
+
+    reset_dedup_store()
     chunks = [
         {
             "uuid": "00000000-0000-4000-8000-000000000002",
@@ -53,6 +57,11 @@ def test_write_chunks_live_stub_stores() -> None:
     assert result["qdrant_written"] == 1
     assert result["neo4j_written"] == 1
     assert result["stub"] is True
+
+    duplicate = write_chunks(chunks)
+    assert duplicate["validated"] == 1
+    assert duplicate["written"] == 0
+    assert duplicate["skipped_dedup"] == 1
 
 
 def test_batch_write_task() -> None:

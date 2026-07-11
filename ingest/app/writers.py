@@ -8,6 +8,7 @@ from typing import Any
 from app.clients.embed import EmbedClient
 from app.clients.neo4j import Neo4jWriter
 from app.clients.qdrant import QdrantWriter
+from app.dedup_store import partition_deduped_chunks, record_written_chunks
 from app.telemetry import get_tracer
 
 _DEFAULT_BATCH_SIZE = 32
@@ -22,14 +23,34 @@ def _write_stub_enabled() -> bool:
 
 
 def write_chunks(chunks: list[dict[str, Any]]) -> dict[str, Any]:
-    """Validate, embed, and upsert chunk payloads to Qdrant + Neo4j."""
+    """Validate, dedup, embed, and upsert chunk payloads to Qdrant + Neo4j."""
     tracer = get_tracer()
     validated = [chunk for chunk in chunks if chunk.get("uuid") and chunk.get("text")]
     if not validated:
-        return {"written": 0, "validated": 0, "stub": True}
+        return {"written": 0, "validated": 0, "skipped_dedup": 0, "stub": True}
 
     if _write_stub_enabled():
-        return {"written": 0, "validated": len(validated), "stub": True}
+        return {
+            "written": 0,
+            "validated": len(validated),
+            "skipped_dedup": 0,
+            "stub": True,
+        }
+
+    with tracer.start_as_current_span("ingest.dedup") as span:
+        to_write, skipped_dedup = partition_deduped_chunks(validated)
+        span.set_attribute("ingest.chunk_count", len(validated))
+        span.set_attribute("ingest.skipped_dedup", skipped_dedup)
+
+    if not to_write:
+        return {
+            "written": 0,
+            "validated": len(validated),
+            "skipped_dedup": skipped_dedup,
+            "qdrant_written": 0,
+            "neo4j_written": 0,
+            "stub": False,
+        }
 
     embed_client = EmbedClient()
     qdrant = QdrantWriter()
@@ -38,8 +59,8 @@ def write_chunks(chunks: list[dict[str, Any]]) -> dict[str, Any]:
     sparse_vectors: list[dict[str, Any]] = []
 
     with tracer.start_as_current_span("inference/embed/batch") as span:
-        span.set_attribute("ingest.chunk_count", len(validated))
-        texts = [chunk["text"] for chunk in validated]
+        span.set_attribute("ingest.chunk_count", len(to_write))
+        texts = [chunk["text"] for chunk in to_write]
         for start in range(0, len(texts), _batch_size()):
             batch_texts = texts[start : start + _batch_size()]
             dense_vectors.extend(embed_client.embed_batch(batch_texts))
@@ -47,23 +68,26 @@ def write_chunks(chunks: list[dict[str, Any]]) -> dict[str, Any]:
             sparse_vectors.append(embed_client.sparse_from_text(text))
 
     with tracer.start_as_current_span("store/qdrant/upsert") as span:
-        span.set_attribute("ingest.chunk_count", len(validated))
+        span.set_attribute("ingest.chunk_count", len(to_write))
         qdrant_written = qdrant.upsert_chunks(
-            validated,
+            to_write,
             dense_vectors=dense_vectors,
             sparse_vectors=sparse_vectors,
         )
         span.set_attribute("ingest.qdrant_written", qdrant_written)
 
     with tracer.start_as_current_span("store/neo4j/merge") as span:
-        span.set_attribute("ingest.chunk_count", len(validated))
-        neo4j_written = neo4j.merge_chunks(validated)
+        span.set_attribute("ingest.chunk_count", len(to_write))
+        neo4j_written = neo4j.merge_chunks(to_write)
         span.set_attribute("ingest.neo4j_written", neo4j_written)
     neo4j.close()
+
+    record_written_chunks(to_write)
 
     return {
         "written": qdrant_written,
         "validated": len(validated),
+        "skipped_dedup": skipped_dedup,
         "qdrant_written": qdrant_written,
         "neo4j_written": neo4j_written,
         "stub": embed_client.is_stub and qdrant.is_stub and neo4j.is_stub,
