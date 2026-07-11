@@ -199,6 +199,20 @@ class PostgresCatalogStore(CatalogStore):
             conn.commit()
         return {"documents_recorded": recorded}
 
+    def count_tenant_chunks(self, tenant_id: str) -> int:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT COALESCE(SUM(chunk_count), 0)
+                    FROM document_versions
+                    WHERE tenant_id = %s
+                    """,
+                    (tenant_id,),
+                )
+                row = cur.fetchone()
+        return int(row[0] if row else 0)
+
 
 _store: CatalogStore | None = None
 

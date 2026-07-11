@@ -18,13 +18,15 @@ from app.backpressure import assert_enqueue_allowed, check_backpressure
 from app.catalog_store import get_catalog_store
 from app.connector_handlers import enqueue_collection_sync
 from app.job_handlers import get_job_status
+from app.quota_handlers import get_tenant_quotas, put_tenant_quotas
+from app.quota_store import assert_quota_for_enqueue, get_quota_store
 from app.job_store import get_job_store
 from app.parsers.base import ParseContext
 from app.pipeline import parse_document
 from app.tasks import batch_write
 from app.telemetry import get_tracer, setup_otel
 
-app = FastAPI(title="hybrid-rag-ingest-orchestrator", version="0.10.0-backpressure")
+app = FastAPI(title="hybrid-rag-ingest-orchestrator", version="0.11.0-quotas")
 setup_otel(app)
 tracer = get_tracer()
 
@@ -51,6 +53,7 @@ def healthz() -> dict:
                     get_acl_store().healthcheck()
                     and get_job_store().healthcheck()
                     and get_catalog_store().healthcheck()
+                    and get_quota_store().healthcheck()
                 ),
                 "inference_embed_ok": os.environ.get("EMBED_STUB", "true").lower() in ("true", "1", "yes"),
             },
@@ -117,6 +120,7 @@ async def ingest_document(request: Request) -> dict:
             ctx=ctx,
             manifest_parser=body.get("manifest_parser"),
         )
+        assert_quota_for_enqueue(tenant_id, estimated_chunks=len(chunks))
         async_result = batch_write.delay(chunks, job_id=job_id)
         get_job_store().attach_task_id(job_id, async_result.id)
         return {
@@ -167,3 +171,15 @@ def remove_acl_grant(grant_id: str) -> dict:
 async def patch_default_acl(tenant_id: str, collection_id: str, request: Request) -> dict:
     with tracer.start_as_current_span("ingest.acl.collection.default_acl"):
         return await patch_collection_default_acl(tenant_id, collection_id, request)
+
+
+@app.get("/admin/tenants/{tenant_id}/quotas")
+def read_tenant_quotas(tenant_id: str) -> dict:
+    with tracer.start_as_current_span("ingest.quota.get"):
+        return get_tenant_quotas(tenant_id)
+
+
+@app.put("/admin/tenants/{tenant_id}/quotas")
+async def update_tenant_quotas(tenant_id: str, request: Request) -> dict:
+    with tracer.start_as_current_span("ingest.quota.put"):
+        return await put_tenant_quotas(tenant_id, request)

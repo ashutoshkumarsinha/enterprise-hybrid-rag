@@ -32,7 +32,7 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | LangGraph RAG orchestration + LangSmith | **Partial** — real retrieve/answer; graph stub | `query/app/rag_graph.py`, TL-06/07 |
 | Test-driven development | **Normative** | §13.4, §19, `docs/TESTING.md` |
 | Implementation inventory | **Normative** | spec §1.4–1.5, §12.8 |
-| **Ingest parsers / admin API** | **Done v0.46** — full plane + benchmark + Celery poll + backpressure | — |
+| **Ingest parsers / admin API** | **Done v0.49** — full plane + benchmark + Celery poll + backpressure + quotas | Query admission pending |
 
 ---
 
@@ -113,7 +113,7 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | E-24 | Multi-region read replica story | spec §12.4 expansion |
 | E-25 | Embedding dimension migration playbook | resolves OQ2 |
 | E-26 | Chaos test suite automation | spec §13.1 monthly staging |
-| E-27 | Tenant quota admin API | `PUT /admin/tenants/{id}/quotas` |
+| E-27 | Tenant quota admin API | `PUT /admin/tenants/{id}/quotas` | **Done v0.49** (ingest) |
 | E-28 | Circuit breaker implementation | query `client_factory.py` | **Done v0.31** |
 | E-29 | Load test harness (`load_test.py`) | k6/locust wrapper | **Done v0.48** |
 
