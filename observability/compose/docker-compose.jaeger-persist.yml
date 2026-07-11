@@ -1,0 +1,14 @@
+# OBS-P4 — Jaeger Badger persistent trace storage
+# Usage: make up PROFILE=jaeger-persist
+
+services:
+  jaeger-persist:
+    image: busybox:1.36
+    profiles: ["jaeger-persist"]
+    command: ["true"]
+    restart: "no"
+
+  jaeger:
+    environment:
+      SPAN_STORAGE_TYPE: badger
+      BADGER_EPHEMERAL: "false"

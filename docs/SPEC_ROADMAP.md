@@ -99,15 +99,16 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | OBS-P1 | Probabilistic trace sampler | observability | **Done** — `collector/otel-collector-config.prod.yaml` |
 | OBS-P2 | Query attribute truncation processor | observability | collector config |
 | OBS-P3 | `benchmark_rag.py --compare-otel` | query | **Done v0.47** — CI gate < 5% p95 overhead |
-| OBS-P4 | Jaeger persistent storage profile | observability | compose profile `jaeger-persist` |
+| OBS-P4 | Jaeger persistent storage profile | observability | **Done** — `PROFILE=jaeger-persist`, Badger volume |
+| OBS-P5 | Prometheus SLO alert rules | observability | **Done** — `alerts/prometheus-rules.yaml`, `PROFILE=metrics` |
 
 ### P2 — Enterprise hardening
 
 | ID | Enhancement | Notes |
 |----|-------------|-------|
 | E-34 | mTLS between tiers | infra Caddy + service mesh option |
-| E-21 | Tenant offboarding automation | spec §9.1 purge API |
-| E-22 | Version retention job | nightly Qdrant + Neo4j prune |
+| E-21 | Tenant offboarding automation | **Done** — `tenant_purge.py`, `POST /admin/tenants/{id}/purge`, `make purge-tenant` |
+| E-22 | Version retention job | **Done** — `version_prune.py`, Qdrant + Neo4j + catalog prune, `make prune-versions` |
 | E-23 | SigNoz dashboards as code | **Done** — `scripts/import_signoz.py`, dashboard stubs, `signoz-rules.yaml` |
 | E-44 | Session retention prune job | **Done** — `session_prune.py`, `POST /admin/sessions/prune`, `make prune-sessions` |
 | E-24 | Multi-region read replica story | spec §12.4 expansion |

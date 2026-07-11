@@ -101,9 +101,9 @@ processors:
 
 | Setting | Dev | Prod |
 |---------|-----|------|
-| Storage | in-memory (all-in-one) | Badger or Elasticsearch (future) |
+| Storage | in-memory (all-in-one) | Badger volume (`PROFILE=jaeger-persist`) |
 | UI | `:16686` | internal network only |
-| Trace retention | 24h | 7d with storage backend |
+| Trace retention | 24h (in-memory) | 7d (`JAEGER_TRACE_RETENTION=168h`) |
 
 **Cardinality rule:** limit high-cardinality attributes (`request_id` ok; `chunk_id` per span — avoid).
 
@@ -129,6 +129,7 @@ Use when APM dashboards and SLO alerting exceed Jaeger capabilities. Normative s
 | Metrics | `rag_ttft_ms`, `rag_stage_ms` via `OTEL_METRICS_EXPORTER=otlp` or `SIGNOZ_ENABLED=true` (FR-40) | **Done** in `query/app/otel_metrics.py` |
 | Dashboards | `dashboards/signoz-*.json` stubs — import via SigNoz UI |
 | Alerts | `alerts/signoz-rules.yaml` |
+| Prometheus alerts | `alerts/prometheus-rules.yaml` (`PROFILE=metrics`) |
 
 ```bash
 export SIGNOZ_OTLP_ENDPOINT=signoz-otel-collector:4317
@@ -187,8 +188,8 @@ synthetic_trace_on_health = false
 | OBS-P1 | `probabilistic_sampler` processor + prod config profile | **done** |
 | OBS-P2 | `attributes/redact` for query string truncation in collector | **done** (signoz + prod configs) |
 | OBS-P3 | `benchmark_rag.py --compare-otel` CI gate | **done** |
-| OBS-P4 | Jaeger persistent storage compose profile | planned |
-| OBS-P5 | Prometheus alert rules for `rag_ttft_ms` p95 | planned |
+| OBS-P4 | Jaeger persistent storage compose profile | **done** |
+| OBS-P5 | Prometheus alert rules for `rag_ttft_ms` p95 | **done** |
 | OBS-P6 | Tail sampling for error traces (100% errors, 10% success) | future |
 
 | OBS-P6 | Tail sampling for error traces (100% errors, 10% success) | future |

@@ -131,7 +131,13 @@ Optional Prometheus profile:
 
 ```bash
 make up PROFILE=metrics
-open http://localhost:9090
+open http://localhost:9090/alerts   # OBS-P5 SLO rules (rag_ttft_ms p95, retrieve, ingest)
+```
+
+Persistent Jaeger traces (Badger, 7d default):
+
+```bash
+make up PROFILE=jaeger-persist
 ```
 
 ---
@@ -142,6 +148,7 @@ open http://localhost:9090
 |---------|----------------|
 | TLS | Set `OTEL_EXPORTER_OTLP_INSECURE=false`; terminate TLS at collector or use sidecar |
 | Sampling | Add `probabilistic_sampler` processor in collector for high QPS |
+| Trace retention | `make up PROFILE=jaeger-persist` — Badger volume + `JAEGER_TRACE_RETENTION` (OBS-P4) |
 | SigNoz | `PROFILE=signoz` + `otel-collector-config.signoz.yaml` + `SIGNOZ_OTLP_ENDPOINT` — see [SIGNOZ.md](./SIGNOZ.md) and platform §10.5 |
 | Langfuse | Keep SDK for LLM cost; OTLP for infra/HTTP spans |
 | HA | Run collector as DaemonSet; multiple replicas behind load balancer for OTLP HTTP |

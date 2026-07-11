@@ -97,4 +97,15 @@ echo "==> smoke_test --e2e"
   }
 )
 
+echo "==> version_prune (dry-run)"
+(
+  cd ingest
+  PY="${ROOT}/ingest/.venv/bin/python"
+  if [[ ! -x "$PY" ]]; then PY=python3; fi
+  "$PY" -m app.version_prune --dry-run || {
+    if [[ "${LIVE_STACK_STRICT:-0}" == "1" ]]; then exit 1; fi
+    echo "WARN: version prune dry-run failed (LIVE_STACK_STRICT=0)"
+  }
+)
+
 echo "Nightly pipeline OK"

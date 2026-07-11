@@ -1,0 +1,85 @@
+# Prometheus alert rules — platform spec §18.14 / OBS-P5
+# Loaded by collector/prometheus.yml when PROFILE=metrics
+#
+# Metrics exported from query via OTLP → otel-collector → :8889/metrics (FR-40)
+
+groups:
+  - name: hybrid-rag-query-slo
+    rules:
+      - alert: QueryTTFTp95High
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(rag_ttft_ms_bucket[5m])) by (le)
+          ) > 2000
+        for: 30m
+        labels:
+          severity: warning
+          plane: query
+          slo: ttft
+        annotations:
+          summary: RAG time-to-first-token p95 exceeds 2s
+          description: TTFT p95 > 2000ms for 30 minutes. Check inference cold start and retrieve latency.
+
+      - alert: QueryRetrieveStageP95High
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(rag_stage_ms_bucket{stage="retrieve"}[5m])) by (le)
+          ) > 500
+        for: 15m
+        labels:
+          severity: warning
+          plane: query
+          slo: retrieve
+        annotations:
+          summary: RAG retrieve stage p95 exceeds 500ms
+          description: rag_stage_ms retrieve p95 > 500ms for 15 minutes.
+
+      - alert: McpErrorRateHigh
+        expr: |
+          sum(rate(mcp_request_duration_ms_count{status=~"5.."}[5m]))
+          / sum(rate(mcp_request_duration_ms_count[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          plane: query
+        annotations:
+          summary: MCP error rate above 1%
+
+  - name: hybrid-rag-ingest-slo
+    rules:
+      - alert: IngestThroughputLow
+        expr: |
+          ingest_chunks_per_second
+          < 0.5 * avg_over_time(ingest_chunks_per_second[1h])
+        for: 10m
+        labels:
+          severity: warning
+          plane: ingest
+          slo: throughput
+        annotations:
+          summary: Ingest throughput below 50% of 1h baseline
+          description: ingest_chunks_per_second dropped below half the rolling hourly average for 10 minutes.
+
+      - alert: IngestQueueDepthHigh
+        expr: celery_queue_depth > 500
+        for: 5m
+        labels:
+          severity: warning
+          plane: ingest
+        annotations:
+          summary: Celery queue depth exceeds 500
+
+  - name: hybrid-rag-observability
+    rules:
+      - alert: TraceExportFailure
+        expr: |
+          sum(rate(otel_export_errors_total[5m])) by (exporter)
+          / sum(rate(otel_exporter_sent_spans[5m])) by (exporter) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          plane: observability
+        annotations:
+          summary: OTLP export failure rate above 1%

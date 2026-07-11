@@ -5,7 +5,7 @@ REGISTRY ?=
 PUSH     ?= false
 PACKER_ARGS := -var "image_tag=$(IMAGE_TAG)" -var "registry=$(REGISTRY)" -var "push=$(PUSH)"
 
-.PHONY: network up down health logs build lint format migrate migrate-status packer-init packer-validate packer-build benchmark benchmark-mock
+.PHONY: network up down health logs build lint format migrate migrate-status prune-versions packer-init packer-validate packer-build benchmark benchmark-mock
 
 network:
 	docker network inspect hybrid-rag-net >/dev/null 2>&1 || docker network create hybrid-rag-net
@@ -41,6 +41,19 @@ migrate: ## Apply pending catalog migrations (requires CATALOG_DSN)
 
 migrate-status: ## Show applied/pending migrations
 	@python -m app.migrate --status
+
+prune-versions: ## Prune old document versions beyond VERSION_RETENTION_COUNT (E-22)
+	@PY=$$( [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3 ); \
+	$$PY -m app.version_prune
+
+purge-tenant: ## Purge tenant data (E-21) — requires TENANT=... and CONFIRM=1
+	@test -n "$(TENANT)" || (echo "Usage: make purge-tenant TENANT=acme CONFIRM=1" && exit 1)
+	@PY=$$( [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3 ); \
+	if [ "$(CONFIRM)" = "1" ]; then \
+	  $$PY -m app.tenant_purge "$(TENANT)" --confirm; \
+	else \
+	  $$PY -m app.tenant_purge "$(TENANT)" --dry-run; \
+	fi
 
 test: ## Run ingest unit + contract tests
 	@python -m pytest tests/unit tests/contract -q

@@ -47,6 +47,11 @@ def publish_ingest_completed(
     )
 
 
+def publish_tenant_purged(*, tenant_id: str) -> None:
+    """Emit ``tenant.purged`` for query cache invalidation (E-21)."""
+    _publish_event({"type": "tenant.purged", "tenant_id": tenant_id})
+
+
 def _publish_event(payload: dict) -> None:
     url = os.environ.get("REDIS_URL")
     if not url:

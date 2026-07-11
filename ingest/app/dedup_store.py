@@ -49,6 +49,13 @@ class InMemoryDedupStore(DedupStore):
     def store_uuids(self, entries: dict[str, str]) -> None:
         self._entries.update(entries)
 
+    def purge_tenant(self, tenant_id: str) -> int:
+        prefix = f"dedup:{tenant_id}:"
+        keys = [key for key in self._entries if key.startswith(prefix)]
+        for key in keys:
+            del self._entries[key]
+        return len(keys)
+
 
 class RedisDedupStore(DedupStore):
     def __init__(self, url: str, *, mget_batch: int) -> None:
@@ -83,6 +90,19 @@ class RedisDedupStore(DedupStore):
             pipe.set(key, uuid)
         pipe.execute()
 
+    def purge_tenant(self, tenant_id: str) -> int:
+        prefix = f"dedup:{tenant_id}:"
+        deleted = 0
+        cursor = 0
+        while True:
+            cursor, keys = self._client.scan(cursor=cursor, match=f"{prefix}*", count=500)
+            if keys:
+                self._client.delete(*keys)
+                deleted += len(keys)
+            if cursor == 0:
+                break
+        return deleted
+
 
 class DisabledDedupStore(DedupStore):
     @property
@@ -94,6 +114,9 @@ class DisabledDedupStore(DedupStore):
 
     def store_uuids(self, entries: dict[str, str]) -> None:
         return
+
+    def purge_tenant(self, tenant_id: str) -> int:
+        return 0
 
 
 _store: DedupStore | None = None
@@ -155,3 +178,10 @@ def record_written_chunks(chunks: list[dict[str, Any]]) -> None:
         for chunk in chunks
     }
     store.store_uuids(entries)
+
+
+def purge_tenant_dedup_keys(tenant_id: str) -> int:
+    store = get_dedup_store()
+    if not store.enabled:
+        return 0
+    return store.purge_tenant(tenant_id)

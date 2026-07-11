@@ -96,6 +96,55 @@ class Neo4jWriter:
                 merged += len(batch)
         return merged
 
+    def prune_version(
+        self,
+        *,
+        tenant_id: str,
+        document_id: str,
+        version_id: str,
+    ) -> int:
+        """Remove version node and chunk nodes for a pruned document version."""
+        if self._stub:
+            return 1
+        assert self._driver is not None
+        query = """
+        OPTIONAL MATCH (c:Chunk {tenant_id: $tenant_id, document_id: $document_id, version_id: $version_id})
+        WITH collect(c) AS chunks
+        WITH size(chunks) AS deleted_chunks, chunks
+        UNWIND chunks AS chunk
+        DETACH DELETE chunk
+        WITH deleted_chunks
+        OPTIONAL MATCH (v:Version {tenant_id: $tenant_id, document_id: $document_id, version_id: $version_id})
+        DETACH DELETE v
+        RETURN deleted_chunks
+        """
+        with self._driver.session() as session:
+            result = session.run(
+                query,
+                tenant_id=tenant_id,
+                document_id=document_id,
+                version_id=version_id,
+            )
+            record = result.single()
+        return int(record["deleted_chunks"]) if record else 0
+
+    def purge_tenant(self, *, tenant_id: str) -> int:
+        """Remove all graph nodes scoped to a tenant."""
+        if self._stub:
+            return 1
+        assert self._driver is not None
+        query = """
+        MATCH (n)
+        WHERE n.tenant_id = $tenant_id
+        WITH collect(n) AS nodes
+        FOREACH (node IN nodes | DETACH DELETE node)
+        RETURN size(nodes) AS deleted_nodes
+        """
+        with self._driver.session() as session:
+            result = session.run(query, tenant_id=tenant_id)
+            record = result.single()
+        return int(record["deleted_nodes"]) if record else 0
+
 
 def _chunk_row(chunk: dict[str, Any]) -> dict[str, Any]:
     tenant_id = chunk["tenant_id"]

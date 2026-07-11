@@ -122,3 +122,65 @@ class QdrantWriter:
             except Exception:
                 pass
         self._indexes_ensured = True
+
+    def delete_version(
+        self,
+        *,
+        tenant_id: str,
+        collection_id: str,
+        document_id: str,
+        version_id: str,
+        expected_points: int | None = None,
+    ) -> int:
+        """Delete Qdrant points for a document version; returns deleted estimate."""
+        if self._stub:
+            return int(expected_points or 0)
+        assert self._client is not None
+        self._client.delete(
+            collection_name=self.collection,
+            points_selector=models.FilterSelector(
+                filter=models.Filter(
+                    must=[
+                        models.FieldCondition(
+                            key="tenant_id",
+                            match=models.MatchValue(value=tenant_id),
+                        ),
+                        models.FieldCondition(
+                            key="collection_id",
+                            match=models.MatchValue(value=collection_id),
+                        ),
+                        models.FieldCondition(
+                            key="document_id",
+                            match=models.MatchValue(value=document_id),
+                        ),
+                        models.FieldCondition(
+                            key="version_id",
+                            match=models.MatchValue(value=version_id),
+                        ),
+                    ]
+                )
+            ),
+            wait=True,
+        )
+        return int(expected_points or 0)
+
+    def delete_tenant(self, *, tenant_id: str, expected_points: int | None = None) -> int:
+        """Delete all Qdrant points for a tenant."""
+        if self._stub:
+            return int(expected_points or 0)
+        assert self._client is not None
+        self._client.delete(
+            collection_name=self.collection,
+            points_selector=models.FilterSelector(
+                filter=models.Filter(
+                    must=[
+                        models.FieldCondition(
+                            key="tenant_id",
+                            match=models.MatchValue(value=tenant_id),
+                        ),
+                    ]
+                )
+            ),
+            wait=True,
+        )
+        return int(expected_points or 0)

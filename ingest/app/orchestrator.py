@@ -25,8 +25,10 @@ from app.parsers.base import ParseContext
 from app.pipeline import parse_document
 from app.tasks import batch_write
 from app.telemetry import get_tracer, setup_otel
+from app.tenant_purge import PurgeConfirmationRequired, purge_tenant
+from app.version_prune import prune_versions
 
-app = FastAPI(title="hybrid-rag-ingest-orchestrator", version="0.11.0-quotas")
+app = FastAPI(title="hybrid-rag-ingest-orchestrator", version="0.13.0-tenant-purge")
 setup_otel(app)
 tracer = get_tracer()
 
@@ -190,3 +192,38 @@ def read_tenant_quotas(tenant_id: str) -> dict:
 async def update_tenant_quotas(tenant_id: str, request: Request) -> dict:
     with tracer.start_as_current_span("ingest.quota.put"):
         return await put_tenant_quotas(tenant_id, request)
+
+
+@app.post("/admin/tenants/{tenant_id}/purge")
+async def admin_purge_tenant(tenant_id: str, request: Request) -> dict:
+    with tracer.start_as_current_span("ingest.tenant.purge") as span:
+        span.set_attribute("tenant_id", tenant_id)
+        body: dict = {}
+        if request.headers.get("content-type", "").startswith("application/json"):
+            parsed = await request.json()
+            if isinstance(parsed, dict):
+                body = parsed
+        dry_run = bool(body.get("dry_run", False))
+        confirm = bool(body.get("confirm", False))
+        try:
+            return purge_tenant(tenant_id, dry_run=dry_run, confirm=confirm)
+        except PurgeConfirmationRequired as exc:
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "confirmation_required", "message": str(exc)},
+            ) from exc
+
+
+@app.post("/admin/versions/prune")
+async def admin_prune_versions(request: Request) -> dict:
+    with tracer.start_as_current_span("ingest.version.prune"):
+        body: dict = {}
+        if request.headers.get("content-type", "").startswith("application/json"):
+            parsed = await request.json()
+            if isinstance(parsed, dict):
+                body = parsed
+        keep_count = body.get("keep_count")
+        dry_run = bool(body.get("dry_run", False))
+        if keep_count is not None:
+            keep_count = int(keep_count)
+        return prune_versions(keep_count=keep_count, dry_run=dry_run)

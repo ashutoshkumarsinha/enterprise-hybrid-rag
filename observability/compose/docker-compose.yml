@@ -11,6 +11,7 @@ networks:
 volumes:
   langfuse-postgres-data:
   prometheus-data:
+  jaeger-badger-data:
 
 services:
   langfuse-postgres:
@@ -53,9 +54,22 @@ services:
     image: jaegertracing/all-in-one:1.58
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
+      SPAN_STORAGE_TYPE: ${JAEGER_STORAGE_TYPE:-memory}
+      BADGER_EPHEMERAL: ${JAEGER_BADGER_EPHEMERAL:-true}
+      BADGER_DIRECTORY_VALUE: /badger/data
+      BADGER_DIRECTORY_KEY: /badger/key
+      BADGER_SPAN_STORE_TTL: ${JAEGER_TRACE_RETENTION:-168h}
+    volumes:
+      - jaeger-badger-data:/badger
     ports:
       - "${JAEGER_UI_PORT:-16686}:16686"
     networks: [hybrid-rag-net]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:16686"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.96.0
@@ -85,6 +99,7 @@ services:
     profiles: ["metrics"]
     volumes:
       - ../collector/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../alerts/prometheus-rules.yaml:/etc/prometheus/alerts/prometheus-rules.yaml:ro
       - prometheus-data:/prometheus
     ports:
       - "${PROMETHEUS_PORT:-9090}:9090"
@@ -92,6 +107,11 @@ services:
     depends_on:
       otel-collector:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   signoz-otel-collector:
     image: signoz/signoz-otel-collector:0.88.12

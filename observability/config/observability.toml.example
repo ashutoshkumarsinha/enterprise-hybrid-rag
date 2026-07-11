@@ -43,6 +43,7 @@ sdk_overhead_p95_budget_ms = 5
 [retention]
 langfuse_days = 90
 signoz_days = 30
+jaeger_trace_retention = "168h"   # Badger TTL when PROFILE=jaeger-persist (OBS-P4)
 
 [alerts]
 trace_export_failure_threshold_percent = 1.0

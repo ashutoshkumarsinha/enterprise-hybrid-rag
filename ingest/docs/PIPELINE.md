@@ -75,6 +75,10 @@ Start `celery_concurrency=2`, `embed_parallelism=2`. Raise one knob at a time; w
 | Parse failure | Per-file error; job `completed_with_errors` |
 | Full reindex | New `version_id`; old points until retention |
 
+**Retention (E-22):** Nightly `make prune-versions` or `POST /admin/versions/prune` keeps the last `VERSION_RETENTION_COUNT` versions per document (default **3**, OD2). Prunes Qdrant points, Neo4j `Version`/`Chunk` nodes, and `document_versions` catalog rows. Never prunes `latest_version_id`.
+
+**Offboarding (E-21):** `POST /admin/tenants/{tenant_id}/purge` with `{"confirm": true}` removes all tenant data from Qdrant, Neo4j, MinIO (`{tenant_id}/` prefix), Postgres catalog, and dedup keys. Dry-run: `{"dry_run": true}`. CLI: `make purge-tenant TENANT=acme CONFIRM=1`.
+
 ## Benchmarks
 
 ```bash

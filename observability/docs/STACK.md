@@ -101,7 +101,8 @@ OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
 |------|--------|
 | **Langfuse Cloud** | Omit `langfuse` services; set `LANGFUSE_HOST=https://cloud.langfuse.com` in apps |
 | **SigNoz** | `make up PROFILE=signoz` — see [SIGNOZ.md](./SIGNOZ.md) |
-| **Prometheus** | `make up PROFILE=metrics` |
+| **Prometheus** | `make up PROFILE=metrics` — scrapes collector `:8889`, loads `alerts/prometheus-rules.yaml` (OBS-P5) |
+| **Jaeger Badger** | `make up PROFILE=jaeger-persist` — 7d trace retention on disk (OBS-P4) |
 
 No application image rebuild required — env URLs only.
 
