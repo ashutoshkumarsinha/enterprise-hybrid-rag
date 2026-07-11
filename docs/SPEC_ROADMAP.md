@@ -156,6 +156,8 @@ This document is the **living plan** for spec depth, implementation phases, and 
 ```mermaid
 flowchart TB
     SPEC[ENTERPRISE_HYBRID_RAG_SPEC.md platform overview]
+    LLD[docs/LLD.md low-level design]
+    SPEC --> LLD
     SPEC --> DOC[docs/DOCUMENTATION.md + audience guides]
     SPEC --> TST[docs/TESTING.md]
     SPEC --> KERNEL[modules/SHARED_CONTRACTS.md]

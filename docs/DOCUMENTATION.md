@@ -15,8 +15,8 @@ This playbook defines **who reads what**, **how diagrams are drawn**, **how code
 | **End user** | Ask questions grounded in company documents; understand scope and citations | [USER_GUIDE.md](./USER_GUIDE.md) | mod-chat help (when deployed) |
 | **Administrator** | Manage collections, ingest jobs, ACL, quotas, tenants | [ADMIN_GUIDE.md](./ADMIN_GUIDE.md) | `ingest/docs/`, §9 security |
 | **Deployment / SRE** | Bootstrap stacks, health gates, upgrades, capacity | [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) | `infra/docs/`, [PERFORMANCE.md](./PERFORMANCE.md) |
-| **Solution architect** | Boundaries, interfaces, security, scaling topologies | [ARCHITECT_GUIDE.md](./ARCHITECT_GUIDE.md) | Platform spec §3, §3A, §17 |
-| **Developer** | Implement features test-first; extend parsers and pipeline | [DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md) | [TESTING.md](./TESTING.md), sub-project `SPEC.md` |
+| **Solution architect** | Boundaries, interfaces, security, scaling topologies | [ARCHITECT_GUIDE.md](./ARCHITECT_GUIDE.md) | Platform spec §3, §3A, §17, [LLD.md](./LLD.md) |
+| **Developer** | Implement features test-first; extend parsers and pipeline | [DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md) | [LLD.md](./LLD.md), [TESTING.md](./TESTING.md), sub-project `SPEC.md` |
 
 ```mermaid
 flowchart TB

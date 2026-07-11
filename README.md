@@ -17,6 +17,7 @@ All runtime planes are **independent sub-projects** connected via [`modules/SHAR
 | [docs/ADMIN_GUIDE.md](./docs/ADMIN_GUIDE.md) | Administrator guide (collections, ingest, ACL, quotas) |
 | [docs/DEPLOYMENT_GUIDE.md](./docs/DEPLOYMENT_GUIDE.md) | Deployment / SRE bootstrap and operations |
 | [docs/ARCHITECT_GUIDE.md](./docs/ARCHITECT_GUIDE.md) | Solution architect interfaces and topologies |
+| [docs/LLD.md](./docs/LLD.md) | **Low-level design** — modules, APIs, data models, sequences |
 | [docs/DEVELOPER_GUIDE.md](./docs/DEVELOPER_GUIDE.md) | Developer onboarding, TDD, extending the pipeline |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | PR checklist and contribution expectations |
 | [docs/TESTING.md](./docs/TESTING.md) | Test-driven development playbook |

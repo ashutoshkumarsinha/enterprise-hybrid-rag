@@ -224,6 +224,7 @@ Full ADR list: platform spec §17. Highlights:
 |----------|---------|
 | [ENTERPRISE_HYBRID_RAG_SPEC.md](../ENTERPRISE_HYBRID_RAG_SPEC.md) §1.4 | **Implementation inventory** — stub vs shipped |
 | [ENTERPRISE_HYBRID_RAG_SPEC.md](../ENTERPRISE_HYBRID_RAG_SPEC.md) | Normative platform spec |
+| [LLD.md](./LLD.md) | Exhaustive low-level design (modules, APIs, data models) |
 | [SHARED_CONTRACTS.md](../modules/SHARED_CONTRACTS.md) | Cross-plane schemas |
 | [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) | Operational bootstrap |
 | [DOCUMENTATION.md](./DOCUMENTATION.md) | Doc and diagram standards |
