@@ -105,7 +105,7 @@ Platform contract tests listed in [SHARED_CONTRACTS.md](../modules/SHARED_CONTRA
 | `query/tests/fixtures/mcp/research_success.md` | MCP markdown contract |
 | `query/tests/fixtures/sse/done_event.jsonl` | SSE shape |
 | `query/benchmarks/golden_set.json` | Ragas + scope accuracy |
-| `ingest/tests/fixtures/chunks/pay-001.json` | Parser output snapshot |
+| `ingest/tests/fixtures/chunks/e2e-api-keys.json` | E2E ingest→query integration corpus |
 | `modules/schemas/chunk_payload.v1.json` | Kernel validation |
 
 **Rule:** Intentional contract changes require **fixture update + BFF/query changelog note** in the same PR.
@@ -120,7 +120,8 @@ cd query && pytest tests/unit tests/contract -q
 cd ingest && pytest tests/unit tests/contract -q
 
 # Nightly — integration + eval
-LIVE_STACK=1 pytest tests/integration -q
+LIVE_STACK=1 pytest tests/integration -q   # query + ingest
+make test-integration
 python query/benchmarks/benchmark_rag.py --limit 20 --ragas
 python query/benchmarks/compare_benchmark_run.py benchmarks/last_run.json benchmarks/baselines.json
 

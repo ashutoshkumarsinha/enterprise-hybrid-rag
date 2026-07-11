@@ -45,6 +45,9 @@ migrate-status: ## Show applied/pending migrations
 test: ## Run ingest unit + contract tests
 	@python -m pytest tests/unit tests/contract -q
 
+test-integration: ## Live-stack integration (requires .env.live profile)
+	@chmod +x scripts/run-integration.sh && ./scripts/run-integration.sh -q
+
 packer-init:
 	packer init packer/
 

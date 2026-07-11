@@ -1,0 +1,46 @@
+{
+  "tenant_id": "e2e-test",
+  "collection_id": "integration-corpus",
+  "document_id": "api-key-guide",
+  "version_id": "v1",
+  "query": "How do I rotate API keys?",
+  "expected_phrase": "Rotate API keys every 90 days",
+  "chunks": [
+    {
+      "uuid": "e2e00001-0000-4000-8000-000000000001",
+      "tenant_id": "e2e-test",
+      "collection_id": "integration-corpus",
+      "document_id": "api-key-guide",
+      "version_id": "v1",
+      "title": "API Key Guide",
+      "text": "Rotate API keys every 90 days for production services.",
+      "section_title": "Security",
+      "chunk_index": 1,
+      "type": "text",
+      "tags": ["security", "api"],
+      "source_uri": "s3://hybrid-rag/e2e-test/integration-corpus/api-key-guide/v1/raw/guide.md",
+      "source_system": "integration-fixture",
+      "references": [],
+      "ingested_at": "2026-07-10T00:00:00+00:00",
+      "content_hash": "066c78d611a0db006aa531b07603befcbc17b308f0debe28f0cf6a6a76b60a9c"
+    },
+    {
+      "uuid": "e2e00001-0000-4000-8000-000000000002",
+      "tenant_id": "e2e-test",
+      "collection_id": "integration-corpus",
+      "document_id": "api-key-guide",
+      "version_id": "v1",
+      "title": "API Key Guide",
+      "text": "Use separate keys for staging and production environments.",
+      "section_title": "Environments",
+      "chunk_index": 2,
+      "type": "text",
+      "tags": ["security", "api"],
+      "source_uri": "s3://hybrid-rag/e2e-test/integration-corpus/api-key-guide/v1/raw/guide.md",
+      "source_system": "integration-fixture",
+      "references": [],
+      "ingested_at": "2026-07-10T00:00:00+00:00",
+      "content_hash": "2c4baf996751dea2ba689982a0996fb7571fba432e6f619aafd7134e3c83f7fc"
+    }
+  ]
+}

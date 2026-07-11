@@ -191,7 +191,7 @@ flowchart LR
 
 | Artifact | Spec / doc reference |
 |----------|---------------------|
-| `ingest/tests/` | `docs/TESTING.md`, FR-33/34 | **Partial v0.32** — parser + chunk schema contract tests |
+| `ingest/tests/` | **Partial v0.37** — unit/contract + live integration harness |
 | Catalog MCP tools (`list_indexed_documents`, etc.) | **Done v0.30** — `catalog_store.py`, ACL §9.4.2 |
 | `query/app/circuit_breaker.py` | Implemented | FR-28 breakers + §6.3.2 degrade ladder |
 | `query/app/client_factory.py` | Implemented | Guarded client calls + breaker registry |
