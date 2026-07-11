@@ -7,7 +7,6 @@ import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from threading import Lock
-from typing import Any
 
 from fastapi import HTTPException
 

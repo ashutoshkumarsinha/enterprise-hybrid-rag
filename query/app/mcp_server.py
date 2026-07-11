@@ -24,6 +24,7 @@ from app.mcp_handlers import (
     handle_list_sessions,
     handle_research_documents,
 )
+from app.rate_limit import acquire_stream_slot, assert_query_admission, release_stream_slot
 from app.rbac import require_permission
 from app.research_streaming import stream_research_events
 from app.session_store import create_session_store
@@ -51,7 +52,7 @@ async def lifespan(app: FastAPI):
     await stop_event_subscriber()
 
 
-app = FastAPI(title="hybrid-rag-query", version="0.6.0-otel-bench", lifespan=lifespan)
+app = FastAPI(title="hybrid-rag-query", version="0.7.0-admission", lifespan=lifespan)
 setup_otel(app)
 setup_langsmith()
 
@@ -121,6 +122,8 @@ async def research_stream(
     ctx: AuthContext = Depends(get_auth_context),
 ) -> StreamingResponse:
     require_permission(ctx, "mcp.research")
+    assert_query_admission(ctx)
+    acquire_stream_slot(ctx)
     body = await request.json()
 
     with tracer.start_as_current_span("mcp.research_stream") as span:
@@ -130,14 +133,18 @@ async def research_stream(
         if query:
             span.set_attribute("rag.query", query[:120])
 
-        return StreamingResponse(
-            stream_research_events(
-                body,
-                ctx=ctx,
-                session_store=request.app.state.session_store,
-            ),
-            media_type="text/event-stream",
-        )
+        async def stream_with_release():
+            try:
+                async for item in stream_research_events(
+                    body,
+                    ctx=ctx,
+                    session_store=request.app.state.session_store,
+                ):
+                    yield item
+            finally:
+                release_stream_slot(ctx)
+
+        return StreamingResponse(stream_with_release(), media_type="text/event-stream")
 
 
 @app.post("/mcp/tools/research_documents")
@@ -145,6 +152,7 @@ async def mcp_research_documents(
     request: Request,
     ctx: AuthContext = Depends(get_auth_context),
 ) -> dict[str, Any]:
+    assert_query_admission(ctx)
     body = await request.json()
     return await handle_research_documents(
         body,
