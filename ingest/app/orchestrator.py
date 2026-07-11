@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -16,12 +15,14 @@ from app.acl_handlers import (
 )
 from app.acl_store import get_acl_store
 from app.connector_handlers import enqueue_collection_sync
+from app.job_handlers import get_job_status
+from app.job_store import get_job_store
 from app.parsers.base import ParseContext
 from app.pipeline import parse_document
 from app.tasks import batch_write
 from app.telemetry import get_tracer, setup_otel
 
-app = FastAPI(title="hybrid-rag-ingest-orchestrator", version="0.5.0-connectors")
+app = FastAPI(title="hybrid-rag-ingest-orchestrator", version="0.6.0-jobs")
 setup_otel(app)
 tracer = get_tracer()
 
@@ -43,7 +44,7 @@ def healthz() -> dict:
                 "redis_broker_ok": True,
                 "qdrant_write_ok": os.environ.get("QDRANT_STUB", "true").lower() in ("true", "1", "yes"),
                 "neo4j_write_ok": os.environ.get("NEO4J_STUB", "true").lower() in ("true", "1", "yes"),
-                "catalog_ok": get_acl_store().healthcheck(),
+                "catalog_ok": get_acl_store().healthcheck() and get_job_store().healthcheck(),
                 "inference_embed_ok": os.environ.get("EMBED_STUB", "true").lower() in ("true", "1", "yes"),
             },
         }
@@ -89,7 +90,18 @@ async def ingest_document(request: Request) -> dict:
         parser_profile=body.get("parser_profile") or _parser_profile(),
         tags=list(body.get("tags") or []),
     )
-    job_id = str(uuid.uuid4())
+    job = get_job_store().create_job(
+        tenant_id=tenant_id,
+        collection_id=collection_id,
+        mode="version",
+        job_type="document",
+        metadata={
+            "document_id": document_id,
+            "version_id": version_id,
+            "path": str(source),
+        },
+    )
+    job_id = job["job_id"]
     with tracer.start_as_current_span("ingest.job.enqueue_document") as span:
         span.set_attribute("ingest.job_id", job_id)
         chunks = parse_document(
@@ -97,7 +109,7 @@ async def ingest_document(request: Request) -> dict:
             ctx=ctx,
             manifest_parser=body.get("manifest_parser"),
         )
-        async_result = batch_write.delay(chunks)
+        async_result = batch_write.delay(chunks, job_id=job_id)
         return {
             "status": "accepted",
             "job_id": job_id,
@@ -112,7 +124,7 @@ async def ingest_document(request: Request) -> dict:
 def job_status(job_id: str) -> dict:
     with tracer.start_as_current_span("ingest.job.status") as span:
         span.set_attribute("ingest.job_id", job_id)
-        return {"job_id": job_id, "status": "pending", "stub": True}
+        return get_job_status(job_id)
 
 
 @app.post("/admin/acl/grants")

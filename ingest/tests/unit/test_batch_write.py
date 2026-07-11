@@ -64,6 +64,45 @@ def test_write_chunks_live_stub_stores() -> None:
     assert duplicate["skipped_dedup"] == 1
 
 
+def test_batch_write_updates_job_status() -> None:
+    os.environ["INGEST_WRITE_STUB"] = "false"
+    os.environ["EMBED_STUB"] = "true"
+    os.environ["QDRANT_STUB"] = "true"
+    os.environ["NEO4J_STUB"] = "true"
+    os.environ["DEDUP_ENABLED"] = "false"
+    from app.dedup_store import reset_dedup_store
+    from app.job_store import InMemoryJobStore, reset_job_store
+
+    reset_dedup_store()
+    reset_job_store()
+    import app.job_store as job_store_module
+
+    store = InMemoryJobStore()
+    job_store_module._store = store
+    job = store.create_job(tenant_id="acme", collection_id="docs", job_type="document")
+    result = batch_write(
+        [
+            {
+                "uuid": "00000000-0000-4000-8000-000000000010",
+                "tenant_id": "acme",
+                "collection_id": "docs",
+                "document_id": "guide",
+                "version_id": "v1",
+                "title": "Guide",
+                "text": "Unique job status text.",
+                "type": "text",
+                "ingested_at": "2026-01-01T00:00:00+00:00",
+            }
+        ],
+        job_id=job["job_id"],
+    )
+    assert result["written"] == 1
+    status = store.get_job(job["job_id"])
+    assert status is not None
+    assert status["status"] == "completed"
+    assert status["chunk_count"] == 1
+
+
 def test_batch_write_task() -> None:
     os.environ["INGEST_WRITE_STUB"] = "true"
     result = batch_write(

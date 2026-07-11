@@ -34,4 +34,5 @@ def test_collection_sync_enqueue(client: TestClient) -> None:
     body = response.json()
     assert body["status"] == "accepted"
     assert body["task_id"] == "task-123"
+    assert "job_id" in body
     assert body["stub"] is False

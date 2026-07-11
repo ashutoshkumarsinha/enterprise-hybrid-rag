@@ -28,10 +28,11 @@ def sync_collection(
     mode: str = "incremental",
     since: str | None = None,
     parser_profile: str | None = None,
+    job_id: str | None = None,
 ) -> dict[str, Any]:
     """Sync a collection from a connector into the parse + write pipeline."""
     tracer = get_tracer()
-    job_id = str(uuid.uuid4())
+    job_id = job_id or str(uuid.uuid4())
     since_dt = datetime.fromisoformat(since) if since else None
     profile = parser_profile or os.environ.get("PARSER_PROFILE", "fast")
     registry = get_file_registry()
@@ -105,6 +106,9 @@ def sync_collection(
         "ingested": ingested,
         "skipped": skipped,
         "chunk_count": chunk_total,
+        "files_done": ingested,
+        "files_total": ingested + skipped,
+        "error_count": len(errors),
         "errors": errors,
         "stub": getattr(connector_client, "is_stub", False),
     }

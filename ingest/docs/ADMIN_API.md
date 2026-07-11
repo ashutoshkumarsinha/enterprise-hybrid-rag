@@ -10,7 +10,7 @@
 | `/admin/ingest/collection` | POST | Enqueue connector sync (S3/filesystem) |
 | `/admin/connectors/sync` | POST | Alias for collection connector sync |
 | `/admin/ingest/document` | POST | Single document ingest |
-| `/admin/ingest/jobs/{id}` | GET | Job status |
+| `/admin/ingest/jobs/{id}` | GET | Job status (`pending` → `running` → `completed`/`failed`) |
 | `/admin/acl/grants` | POST | Create principal grant (collection or document scope) |
 | `/admin/acl/grants` | GET | List grants (`tenant_id` required; optional `principal`, `collection_id`) |
 | `/admin/acl/grants/{grant_id}` | DELETE | Revoke grant |
