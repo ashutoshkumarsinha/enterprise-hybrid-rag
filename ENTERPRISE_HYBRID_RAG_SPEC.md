@@ -183,6 +183,7 @@ flowchart LR
 | `ingest/app/pipeline.py`, `chunk_builder.py` | Implemented v0.32 | File → `chunk_payload.v1` |
 | `ingest/app/orchestrator.py` | Partial v0.32 | `POST /admin/ingest/document` wired; collection/jobs stub |
 | `ingest/app/writers.py`, `clients/embed.py`, `clients/qdrant.py`, `clients/neo4j.py` | Implemented v0.33 | Batch embed + Qdrant upsert + Neo4j merge (stub tier) |
+| `ingest/app/acl_store.py`, `acl_handlers.py` | Implemented v0.34 | ACL grant CRUD + collection `default_acl` admin |
 
 #### Not yet on disk (normative refs exist)
 

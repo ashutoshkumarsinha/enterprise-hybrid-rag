@@ -31,7 +31,7 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | LangGraph RAG orchestration + LangSmith | **Partial** — real retrieve/answer; graph stub | `query/app/rag_graph.py`, TL-06/07 |
 | Test-driven development | **Normative** | §13.4, §19, `docs/TESTING.md` |
 | Implementation inventory | **Normative** | spec §1.4–1.5, §12.8 |
-| **Ingest parsers / admin API** | **Partial v0.33** — parse + embed/Qdrant/Neo4j write path; collection/jobs stub | E-16 ACL admin, E-17 connectors pending |
+| **Ingest parsers / admin API** | **Partial v0.34** — parse + write path + ACL admin API | E-17 connectors pending |
 
 ---
 
@@ -71,7 +71,7 @@ This document is the **living plan** for spec depth, implementation phases, and 
 |----|-------------|-------------|--------|
 | E-14 | Catalog migrations + runner | `migrate.py`, `make migrate` | **Done v0.28** |
 | E-15 | Contract test suite | `query/tests/contract/` | **Partial** — query 34+; ingest chunk schema + parsers (v0.32) |
-| E-16 | ACL grant API + admin tools | `ingest/docs/ADMIN_API.md` | Prose only |
+| E-16 | ACL grant API + admin tools | `ingest/app/acl_store.py`, `acl_handlers.py` | **Done v0.34** |
 | E-17 | Connector interface v2 (S3 first) | `ingest/docs/CONNECTORS.md` | Prose only |
 | E-18 | mod-chat scaffold (BFF + Keycloak login) | `chat-ui/` | Not started |
 | E-19 | Helm chart sketch | `deploy/helm/` | Not started |

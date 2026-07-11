@@ -10,6 +10,10 @@
 | `/admin/ingest/collection` | POST | Full or incremental collection job |
 | `/admin/ingest/document` | POST | Single document ingest |
 | `/admin/ingest/jobs/{id}` | GET | Job status |
+| `/admin/acl/grants` | POST | Create principal grant (collection or document scope) |
+| `/admin/acl/grants` | GET | List grants (`tenant_id` required; optional `principal`, `collection_id`) |
+| `/admin/acl/grants/{grant_id}` | DELETE | Revoke grant |
+| `/admin/collections/{tenant_id}/{collection_id}/default_acl` | PATCH | Update collection `default_acl` JSON array |
 | `/admin/healthz` | GET | Worker + broker + store write probe |
 
 ## Not exposed
@@ -29,6 +33,20 @@ curl -sf -X POST http://localhost:8020/admin/ingest/collection \
     "collection_id": "payments-api",
     "version_id": "2026-03-01",
     "mode": "incremental"
+  }'
+```
+
+## Example: ACL grant
+
+```bash
+curl -sf -X POST http://localhost:8020/admin/acl/grants \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $INGEST_SERVICE_TOKEN" \
+  -d '{
+    "tenant_id": "acme-corp",
+    "principal": "group:payments-team",
+    "collection_id": "payments-api",
+    "permission": "read"
   }'
 ```
 

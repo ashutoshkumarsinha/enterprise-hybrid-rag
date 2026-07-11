@@ -8,12 +8,19 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 
+from app.acl_handlers import (
+    create_acl_grant,
+    delete_acl_grant,
+    list_acl_grants,
+    patch_collection_default_acl,
+)
+from app.acl_store import get_acl_store
 from app.parsers.base import ParseContext
 from app.pipeline import parse_document
 from app.tasks import batch_write
 from app.telemetry import get_tracer, setup_otel
 
-app = FastAPI(title="hybrid-rag-ingest-orchestrator", version="0.3.0-writers")
+app = FastAPI(title="hybrid-rag-ingest-orchestrator", version="0.4.0-acl-admin")
 setup_otel(app)
 tracer = get_tracer()
 
@@ -35,7 +42,7 @@ def healthz() -> dict:
                 "redis_broker_ok": True,
                 "qdrant_write_ok": os.environ.get("QDRANT_STUB", "true").lower() in ("true", "1", "yes"),
                 "neo4j_write_ok": os.environ.get("NEO4J_STUB", "true").lower() in ("true", "1", "yes"),
-                "catalog_ok": True,
+                "catalog_ok": get_acl_store().healthcheck(),
                 "inference_embed_ok": os.environ.get("EMBED_STUB", "true").lower() in ("true", "1", "yes"),
             },
         }
@@ -99,3 +106,36 @@ def job_status(job_id: str) -> dict:
     with tracer.start_as_current_span("ingest.job.status") as span:
         span.set_attribute("ingest.job_id", job_id)
         return {"job_id": job_id, "status": "pending", "stub": True}
+
+
+@app.post("/admin/acl/grants")
+async def post_acl_grant(request: Request) -> dict:
+    with tracer.start_as_current_span("ingest.acl.grant.create"):
+        return await create_acl_grant(request)
+
+
+@app.get("/admin/acl/grants")
+def get_acl_grants(
+    tenant_id: str,
+    principal: str | None = None,
+    collection_id: str | None = None,
+) -> dict:
+    with tracer.start_as_current_span("ingest.acl.grant.list"):
+        return list_acl_grants(
+            tenant_id=tenant_id,
+            principal=principal,
+            collection_id=collection_id,
+        )
+
+
+@app.delete("/admin/acl/grants/{grant_id}")
+def remove_acl_grant(grant_id: str) -> dict:
+    with tracer.start_as_current_span("ingest.acl.grant.delete") as span:
+        span.set_attribute("acl.grant_id", grant_id)
+        return delete_acl_grant(grant_id)
+
+
+@app.patch("/admin/collections/{tenant_id}/{collection_id}/default_acl")
+async def patch_default_acl(tenant_id: str, collection_id: str, request: Request) -> dict:
+    with tracer.start_as_current_span("ingest.acl.collection.default_acl"):
+        return await patch_collection_default_acl(tenant_id, collection_id, request)
