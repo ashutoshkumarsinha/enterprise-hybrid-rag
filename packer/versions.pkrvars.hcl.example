@@ -1,4 +1,15 @@
 # Copy to versions.pkrvars.hcl or pass via -var-file from repo root build-all.sh
-image_tag = "dev"
-registry  = ""          # e.g. "ghcr.io/myorg" — empty for local tags only
-push      = false       # set true to run docker-push post-processor (requires registry login)
+#
+# Field glossary (E-04) — see packer/README.md for full image catalog.
+#
+# | Field           | Type   | Default              | Purpose |
+# |-----------------|--------|----------------------|---------|
+# | image_tag       | string | dev                  | OCI tag applied to every hybrid-rag-* image; use platform tag (rag-v1.0.0) or sub-project tag (query-v1.0.0) |
+# | registry        | string | ""                   | Registry prefix without trailing slash, e.g. ghcr.io/myorg — empty = local-only tags |
+# | push              | bool   | false                | Run docker-push post-processor after each build (requires docker login) |
+# | vllm_upstream     | string | vllm/vllm-openai:v0.6.6 | Upstream vLLM image to mirror as hybrid-rag-vllm-openai (inference plane only) |
+
+image_tag     = "dev"
+registry      = ""          # e.g. "ghcr.io/myorg" — empty for local tags only
+push          = false       # set true to run docker-push post-processor (requires registry login)
+vllm_upstream = "vllm/vllm-openai:v0.6.6"

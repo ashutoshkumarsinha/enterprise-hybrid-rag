@@ -4,6 +4,35 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import UTC, datetime
+from typing import Any
+
+
+def build_ingest_completed_event(
+    *,
+    tenant_id: str,
+    collection_id: str,
+    version_id: str,
+    job_id: str,
+    chunk_count: int,
+    error_count: int = 0,
+    cache_bump: bool = True,
+    timestamp: str | None = None,
+) -> dict[str, Any]:
+    """Normative ingest.completed payload — modules/schemas/events.ingest_completed.v1.json."""
+    ts = timestamp or datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    return {
+        "event": "ingest.completed",
+        "schema_version": 1,
+        "tenant_id": tenant_id,
+        "collection_id": collection_id,
+        "version_id": version_id,
+        "job_id": job_id,
+        "chunk_count": chunk_count,
+        "error_count": error_count,
+        "cache_bump": cache_bump,
+        "timestamp": ts,
+    }
 
 
 def publish_acl_changed(*, tenant_id: str, grant_id: str | None = None) -> None:
@@ -33,17 +62,22 @@ def publish_ingest_completed(
     *,
     tenant_id: str,
     collection_id: str,
+    version_id: str,
     job_id: str,
     chunk_count: int,
+    error_count: int = 0,
+    cache_bump: bool = True,
 ) -> None:
     _publish_event(
-        {
-            "type": "ingest.completed",
-            "tenant_id": tenant_id,
-            "collection_id": collection_id,
-            "job_id": job_id,
-            "chunk_count": chunk_count,
-        }
+        build_ingest_completed_event(
+            tenant_id=tenant_id,
+            collection_id=collection_id,
+            version_id=version_id,
+            job_id=job_id,
+            chunk_count=chunk_count,
+            error_count=error_count,
+            cache_bump=cache_bump,
+        )
     )
 
 

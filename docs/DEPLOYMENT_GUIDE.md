@@ -240,6 +240,8 @@ Production: TLS at Caddy or upstream LB; `auth.required=true` on query.
 
 Sub-projects version independently with compatibility matrix (spec §12.6):
 
+See **[RELEASE_MATRIX.md](./RELEASE_MATRIX.md)** for the full cross-plane matrix and release gates.
+
 1. Upgrade **infra** stores (backup first)
 2. Upgrade **inference** (model URLs unchanged if possible)
 3. Rolling restart **query** replicas

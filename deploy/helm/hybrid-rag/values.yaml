@@ -1,0 +1,121 @@
+# Default values — Enterprise Hybrid RAG Helm sketch (E-19)
+# Install: helm install hybrid-rag ./deploy/helm/hybrid-rag -f values-prod.yaml
+
+global:
+  imageRegistry: ""
+  imageTag: dev
+  deployEnv: prod
+  otelEndpoint: http://otel-collector:4317
+
+# OQ1 — managed vs self-hosted stores (normative appendix)
+stores:
+  mode: selfHosted # selfHosted | managed
+  qdrant:
+    url: http://qdrant:6333
+    grpcPort: 6334
+    collection: enterprise_hybrid_rag
+  neo4j:
+    uri: bolt://neo4j:7687
+  postgres:
+    host: postgres
+    port: 5432
+    database: catalog
+  redis:
+    url: redis://redis:6379/0
+    brokerUrl: redis://redis:6379/1
+    resultBackend: redis://redis:6379/2
+  minio:
+    endpoint: http://minio:9000
+    bucket: hybrid-rag
+    bucketStaging: hybrid-rag-staging
+
+query:
+  enabled: true
+  image:
+    repository: hybrid-rag-query
+    tag: ""
+    pullPolicy: IfNotPresent
+  replicaCount: 2
+  port: 8010
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 4Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 60
+  auth:
+    required: true
+    jwtBridge: true
+  sessions:
+    enabled: true
+    maxAgeDays: 90
+  rateLimit:
+    enabled: true
+  existingSecret: hybrid-rag-query-secrets
+
+ingest:
+  enabled: true
+  image:
+    repository: hybrid-rag-ingest
+    tag: ""
+    pullPolicy: IfNotPresent
+  orchestrator:
+    replicaCount: 1
+    port: 8020
+  worker:
+    replicaCount: 2
+    concurrency: 4
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 4Gi
+  existingSecret: hybrid-rag-ingest-secrets
+
+modChat:
+  enabled: false
+  image:
+    repository: mod-chat-bff
+    tag: ""
+  webImage:
+    repository: mod-chat-web
+    tag: ""
+  replicaCount: 1
+  bffPort: 4000
+  webPort: 80
+  authStub: false
+  oidcIssuer: http://keycloak:8080/realms/hybrid-rag
+
+ingress:
+  enabled: true
+  className: nginx
+  host: rag.example.com
+  tls:
+    enabled: true
+    secretName: hybrid-rag-tls
+  paths:
+    mcp: /mcp
+    researchStream: /research/stream
+    chat: /
+
+cronJobs:
+  versionPrune:
+    enabled: true
+    schedule: "0 3 * * *"
+    keepCount: 3
+  sessionPrune:
+    enabled: true
+    schedule: "0 4 * * *"
+    maxAgeDays: 90
+
+serviceAccount:
+  create: true
+  name: ""

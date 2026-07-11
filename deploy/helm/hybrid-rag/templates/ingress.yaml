@@ -1,0 +1,46 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "hybrid-rag.fullname" . }}-ingress
+  labels:
+    {{- include "hybrid-rag.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host }}
+      secretName: {{ .Values.ingress.tls.secretName }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.paths.mcp }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "hybrid-rag.fullname" . }}-query
+                port:
+                  number: {{ .Values.query.port }}
+          - path: {{ .Values.ingress.paths.researchStream }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "hybrid-rag.fullname" . }}-query
+                port:
+                  number: {{ .Values.query.port }}
+          {{- if .Values.modChat.enabled }}
+          - path: {{ .Values.ingress.paths.chat }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "hybrid-rag.fullname" . }}-mod-chat
+                port:
+                  number: 80
+          {{- end }}
+{{- end }}

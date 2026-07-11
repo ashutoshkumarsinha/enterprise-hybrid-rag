@@ -1,0 +1,15 @@
+{
+  "name": "mod-chat",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Enterprise Hybrid RAG chat UI + BFF (E-18)",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace server & npm run dev --workspace web",
+    "build": "npm run build --workspace server && npm run build --workspace web",
+    "test": "npm run test --workspace server"
+  }
+}

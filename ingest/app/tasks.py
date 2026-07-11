@@ -9,7 +9,7 @@ from celery import Celery
 from app.connector_sync import sync_collection
 from app.beat_config import beat_enabled, build_beat_schedule, load_beat_targets
 from app.connector_enqueue import enqueue_connector_sync
-from app.langsmith_config import setup_langsmith
+from app.langsmith_config import ingest_traceable, setup_langsmith
 from app.task_jobs import on_task_failure, on_task_start, on_task_success
 from app.telemetry import setup_otel
 from app.writers import write_chunks
@@ -29,12 +29,11 @@ setup_otel()
 setup_langsmith()
 
 
-@celery_app.task(name="ingest.batch_write")
-def batch_write(chunks: list | None = None, job_id: str | None = None) -> dict:
-    """Validate, embed, and upsert chunk payloads to Qdrant + Neo4j."""
+@ingest_traceable("ingest.job.batch_write", run_type="chain")
+def _execute_batch_write(payload: list, job_id: str | None) -> dict:
+    """Core batch_write logic — traced in LangSmith when LANGCHAIN_* is set."""
     from app.telemetry import get_tracer
 
-    payload = chunks or []
     on_task_start(job_id)
     try:
         with get_tracer().start_as_current_span("ingest.batch_write") as span:
@@ -51,6 +50,12 @@ def batch_write(chunks: list | None = None, job_id: str | None = None) -> dict:
     except Exception as exc:
         on_task_failure(job_id, exc)
         raise
+
+
+@celery_app.task(name="ingest.batch_write")
+def batch_write(chunks: list | None = None, job_id: str | None = None) -> dict:
+    """Validate, embed, and upsert chunk payloads to Qdrant + Neo4j."""
+    return _execute_batch_write(chunks or [], job_id)
 
 
 @celery_app.task(name="ingest.connector_sync")

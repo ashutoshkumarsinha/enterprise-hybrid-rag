@@ -1,0 +1,27 @@
+Enterprise Hybrid RAG has been installed.
+
+Release: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+Store mode: {{ .Values.stores.mode }}
+
+{{- if .Values.query.enabled }}
+
+Query MCP / research stream:
+  kubectl port-forward svc/{{ include "hybrid-rag.fullname" . }}-query {{ .Values.query.port }}:{{ .Values.query.port }}
+  curl http://127.0.0.1:{{ .Values.query.port }}/healthz
+{{- end }}
+
+{{- if .Values.ingress.enabled }}
+
+Ingress host: https://{{ .Values.ingress.host }}
+  MCP: {{ .Values.ingress.paths.mcp }}
+  SSE: {{ .Values.ingress.paths.researchStream }}
+{{- end }}
+
+Secrets:
+  Create Kubernetes secrets referenced by existingSecret values before traffic:
+    - {{ .Values.query.existingSecret }}
+    - {{ .Values.ingest.existingSecret }}
+
+Managed stores (OQ1):
+  When stores.mode=managed, point stores.* URLs at your cloud endpoints via values-prod.yaml.

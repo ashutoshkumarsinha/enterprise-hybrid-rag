@@ -1,0 +1,53 @@
+{{- if .Values.cronJobs.versionPrune.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "hybrid-rag.fullname" . }}-version-prune
+  labels:
+    {{- include "hybrid-rag.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.cronJobs.versionPrune.schedule | quote }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: prune
+              image: {{ include "hybrid-rag.image" (dict "global" .Values.global "repo" .Values.ingest.image.repository "tag" .Values.ingest.image.tag) }}
+              command: ["python", "-m", "app.version_prune", "--keep-count", {{ .Values.cronJobs.versionPrune.keepCount | quote }}]
+              envFrom:
+                - configMapRef:
+                    name: {{ include "hybrid-rag.fullname" . }}-env
+                {{- if .Values.ingest.existingSecret }}
+                - secretRef:
+                    name: {{ .Values.ingest.existingSecret }}
+                {{- end }}
+{{- end }}
+---
+{{- if .Values.cronJobs.sessionPrune.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "hybrid-rag.fullname" . }}-session-prune
+  labels:
+    {{- include "hybrid-rag.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.cronJobs.sessionPrune.schedule | quote }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: prune
+              image: {{ include "hybrid-rag.image" (dict "global" .Values.global "repo" .Values.query.image.repository "tag" .Values.query.image.tag) }}
+              command: ["python", "-m", "app.session_prune", "--max-age-days", {{ .Values.cronJobs.sessionPrune.maxAgeDays | quote }}]
+              envFrom:
+                - configMapRef:
+                    name: {{ include "hybrid-rag.fullname" . }}-env
+                {{- if .Values.query.existingSecret }}
+                - secretRef:
+                    name: {{ .Values.query.existingSecret }}
+                {{- end }}
+{{- end }}

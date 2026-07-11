@@ -1,0 +1,45 @@
+# Production overlay — spec §18.16 HPA + split deploy (OD6)
+
+global:
+  deployEnv: prod
+  imageTag: "1.0.0"
+
+stores:
+  mode: managed
+  qdrant:
+    url: https://qdrant.example.com:6333
+  neo4j:
+    uri: bolt+s://neo4j.example.com:7687
+  postgres:
+    host: catalog.example.com
+  redis:
+    url: rediss://redis.example.com:6379/0
+    brokerUrl: rediss://redis.example.com:6379/1
+    resultBackend: rediss://redis.example.com:6379/2
+  minio:
+    endpoint: https://s3.example.com
+
+query:
+  replicaCount: 3
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+
+ingest:
+  worker:
+    replicaCount: 4
+    concurrency: 8
+
+modChat:
+  enabled: true
+  authStub: false
+
+ingress:
+  host: rag.prod.example.com
+
+cronJobs:
+  versionPrune:
+    enabled: true
+  sessionPrune:
+    enabled: true

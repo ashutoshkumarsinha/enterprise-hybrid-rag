@@ -1,0 +1,135 @@
+{
+  "version": 1,
+  "scenarios": [
+    {
+      "id": "redis_unavailable",
+      "title": "Redis unavailable 60s",
+      "expected": "Rate limit fails open with alert; cache miss only",
+      "duration_s": 60,
+      "inject": {
+        "compose_file": "infra/compose/docker-compose.yml",
+        "action": "pause",
+        "service": "redis"
+      },
+      "restore": {
+        "action": "unpause",
+        "service": "redis"
+      },
+      "probes": [
+        {
+          "type": "research_stream",
+          "allow_status": [200, 429, 503],
+          "forbid_status": [500, 502, 504]
+        }
+      ]
+    },
+    {
+      "id": "embed_timeout",
+      "title": "Embed service unavailable",
+      "expected": "L3 degrade — abstain or cache",
+      "duration_s": 30,
+      "inject": {
+        "compose_file": "inference/compose/docker-compose.yml",
+        "action": "stop",
+        "service": "embedding"
+      },
+      "restore": {
+        "action": "start",
+        "service": "embedding"
+      },
+      "probes": [
+        {
+          "type": "research_stream",
+          "allow_status": [200, 503],
+          "forbid_status": [500, 502, 504]
+        }
+      ]
+    },
+    {
+      "id": "qdrant_slow",
+      "title": "Qdrant unavailable / slow path",
+      "expected": "L1 skip graph; alert qdrant_search_latency_ms",
+      "duration_s": 45,
+      "inject": {
+        "compose_file": "infra/compose/docker-compose.yml",
+        "action": "pause",
+        "service": "qdrant"
+      },
+      "restore": {
+        "action": "unpause",
+        "service": "qdrant"
+      },
+      "probes": [
+        {
+          "type": "research_stream",
+          "allow_status": [200, 503],
+          "forbid_status": [500, 502, 504]
+        }
+      ]
+    },
+    {
+      "id": "vllm_restart",
+      "title": "vLLM chat restart",
+      "expected": "Circuit open → 503 until health recovers; no retry storm",
+      "duration_s": 90,
+      "inject": {
+        "compose_file": "inference/compose/docker-compose.yml",
+        "action": "restart",
+        "service": "smoke-llm"
+      },
+      "restore": {
+        "action": "wait_healthy",
+        "service": "smoke-llm",
+        "timeout_s": 120
+      },
+      "probes": [
+        {
+          "type": "health_query",
+          "allow_status": [200],
+          "forbid_status": [500, 502, 504]
+        },
+        {
+          "type": "research_stream",
+          "allow_status": [200, 503],
+          "forbid_status": [500, 502, 504]
+        }
+      ]
+    },
+    {
+      "id": "ingest_flood",
+      "title": "Ingest enqueue backpressure",
+      "expected": "Auto-pause enqueue (FR-29); query TTFT within NFR-18",
+      "duration_s": 15,
+      "inject": {
+        "type": "compose_env",
+        "compose_file": "ingest/compose/docker-compose.yml",
+        "service": "orchestrator",
+        "vars": {
+          "INGEST_BACKPRESSURE_STUB": "true",
+          "INGEST_BACKPRESSURE_STUB_DEPTH": "1500"
+        }
+      },
+      "restore": {
+        "type": "compose_env",
+        "compose_file": "ingest/compose/docker-compose.yml",
+        "service": "orchestrator",
+        "vars": {
+          "INGEST_BACKPRESSURE_STUB": "false",
+          "INGEST_BACKPRESSURE_STUB_DEPTH": "0"
+        }
+      },
+      "probes": [
+        {
+          "type": "ingest_enqueue",
+          "expect_status": 503,
+          "expect_code": "backpressure"
+        },
+        {
+          "type": "research_stream",
+          "allow_status": [200, 429, 503],
+          "forbid_status": [500, 502, 504]
+        }
+      ]
+    }
+  ]
+}

@@ -65,7 +65,7 @@ network: ## Create shared Docker network hybrid-rag-net
 
 .PHONY: env
 env: ## Copy .env.example → .env in each sub-project (skip if .env exists)
-	@for dir in $(INFRA_DIR) $(INFERENCE_DIR) $(OBSERVABILITY_DIR) $(INGEST_DIR) $(QUERY_DIR); do \
+	@for dir in $(INFRA_DIR) $(INFERENCE_DIR) $(OBSERVABILITY_DIR) $(INGEST_DIR) $(QUERY_DIR) chat-ui; do \
 		if [ -f "$$dir/.env.example" ] && [ ! -f "$$dir/.env" ]; then \
 			cp "$$dir/.env.example" "$$dir/.env"; \
 			echo "Created $$dir/.env"; \
@@ -253,6 +253,10 @@ smoke-e2e: ## In-process E2E smoke (query)
 	@cd $(QUERY_DIR) && PY=$$( [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3 ); \
 	$$PY benchmarks/smoke_test.py --e2e --in-process --warn-total-ms 45000
 
+chaos-staging: ## Chaos suite dry-run (set CHAOS_APPLY=1 for live injections)
+	@chmod +x scripts/run-chaos.sh 2>/dev/null || true
+	@./scripts/run-chaos.sh
+
 test-nightly: ## Nightly gate — PR suite + integration + benchmark + compare
 	@chmod +x scripts/ci-nightly.sh scripts/ci-pr.sh 2>/dev/null || true
 	@./scripts/ci-nightly.sh
@@ -301,3 +305,7 @@ packer-build: packer-init ## Build root Packer image set
 
 packer-build-all: ## Build images for every sub-project
 	IMAGE_TAG=$(IMAGE_TAG) REGISTRY=$(REGISTRY) PUSH=$(PUSH) ./packer/build-all.sh
+
+validate-release-matrix: ## Validate index_schema_version + image catalog (E-03/E-04)
+	@PY=$$( [ -x $(QUERY_DIR)/.venv/bin/python ] && echo $(QUERY_DIR)/.venv/bin/python || echo python3 ); \
+	$$PY scripts/validate_release_matrix.py

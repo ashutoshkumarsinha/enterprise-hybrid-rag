@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "updated": "2026-07-11",
+  "naming_convention": {
+    "prefix": "hybrid-rag-",
+    "tag_variable": "image_tag",
+    "registry_variable": "registry",
+    "full_name": "{registry}/{name}:{image_tag}"
+  },
+  "images": [
+    {
+      "name": "hybrid-rag-query",
+      "sub_project": "query",
+      "type": "build",
+      "packer": "query/packer/images.pkr.hcl",
+      "dockerfile": "query/Dockerfile"
+    },
+    {
+      "name": "hybrid-rag-ingest-orchestrator",
+      "sub_project": "ingest",
+      "type": "build",
+      "packer": "ingest/packer/images.pkr.hcl",
+      "dockerfile": "ingest/Dockerfile"
+    },
+    {
+      "name": "hybrid-rag-ingest-worker",
+      "sub_project": "ingest",
+      "type": "build",
+      "packer": "ingest/packer/images.pkr.hcl",
+      "dockerfile": "ingest/Dockerfile.worker"
+    },
+    {
+      "name": "hybrid-rag-reranker",
+      "sub_project": "inference",
+      "type": "build",
+      "packer": "inference/packer/images.pkr.hcl",
+      "dockerfile": "inference/reranker/Dockerfile"
+    },
+    {
+      "name": "hybrid-rag-vllm-openai",
+      "sub_project": "inference",
+      "type": "mirror",
+      "packer": "inference/packer/images.pkr.hcl",
+      "upstream": "vllm/vllm-openai:v0.6.6",
+      "upstream_variable": "vllm_upstream"
+    },
+    {
+      "name": "hybrid-rag-qdrant",
+      "sub_project": "infra",
+      "type": "mirror",
+      "packer": "infra/packer/images.pkr.hcl",
+      "upstream": "qdrant/qdrant:v1.12.5"
+    },
+    {
+      "name": "hybrid-rag-neo4j",
+      "sub_project": "infra",
+      "type": "mirror",
+      "packer": "infra/packer/images.pkr.hcl",
+      "upstream": "neo4j:5.26-community"
+    },
+    {
+      "name": "hybrid-rag-redis",
+      "sub_project": "infra",
+      "type": "mirror",
+      "packer": "infra/packer/images.pkr.hcl",
+      "upstream": "redis:7-alpine"
+    },
+    {
+      "name": "hybrid-rag-minio",
+      "sub_project": "infra",
+      "type": "mirror",
+      "packer": "infra/packer/images.pkr.hcl",
+      "upstream": "minio/minio:RELEASE.2024-12-18T13-15-44Z"
+    },
+    {
+      "name": "hybrid-rag-postgres",
+      "sub_project": "infra",
+      "type": "mirror",
+      "packer": "infra/packer/images.pkr.hcl",
+      "upstream": "postgres:16-alpine"
+    },
+    {
+      "name": "hybrid-rag-caddy",
+      "sub_project": "infra",
+      "type": "mirror",
+      "packer": "infra/packer/images.pkr.hcl",
+      "upstream": "caddy:2.8-alpine"
+    },
+    {
+      "name": "hybrid-rag-keycloak",
+      "sub_project": "infra",
+      "type": "mirror",
+      "packer": "infra/packer/images.pkr.hcl",
+      "upstream": "quay.io/keycloak/keycloak:26.0"
+    },
+    {
+      "name": "hybrid-rag-langfuse-postgres",
+      "sub_project": "observability",
+      "type": "mirror",
+      "packer": "observability/packer/images.pkr.hcl",
+      "upstream": "postgres:16-alpine"
+    },
+    {
+      "name": "hybrid-rag-langfuse",
+      "sub_project": "observability",
+      "type": "mirror",
+      "packer": "observability/packer/images.pkr.hcl",
+      "upstream": "langfuse/langfuse:2"
+    },
+    {
+      "name": "hybrid-rag-otel-collector",
+      "sub_project": "observability",
+      "type": "mirror",
+      "packer": "observability/packer/images.pkr.hcl",
+      "upstream": "otel/opentelemetry-collector-contrib:0.96.0"
+    },
+    {
+      "name": "hybrid-rag-signoz-otel-collector",
+      "sub_project": "observability",
+      "type": "mirror",
+      "packer": "observability/packer/images.pkr.hcl",
+      "upstream": "signoz/signoz-otel-collector:0.88.12"
+    }
+  ]
+}

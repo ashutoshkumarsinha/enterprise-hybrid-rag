@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "hybrid-rag.fullname" . }}-env
+  labels:
+    {{- include "hybrid-rag.labels" . | nindent 4 }}
+data:
+  DEPLOY_ENV: {{ .Values.global.deployEnv | quote }}
+  OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.global.otelEndpoint | quote }}
+  OTEL_EXPORTER_OTLP_INSECURE: "true"
+  QDRANT_URL: {{ .Values.stores.qdrant.url | quote }}
+  QDRANT_GRPC_PORT: {{ .Values.stores.qdrant.grpcPort | quote }}
+  QDRANT_COLLECTION: {{ .Values.stores.qdrant.collection | quote }}
+  NEO4J_URI: {{ .Values.stores.neo4j.uri | quote }}
+  REDIS_URL: {{ .Values.stores.redis.url | quote }}
+  CELERY_BROKER_URL: {{ .Values.stores.redis.brokerUrl | quote }}
+  CELERY_RESULT_BACKEND: {{ .Values.stores.redis.resultBackend | quote }}
+  MINIO_ENDPOINT: {{ .Values.stores.minio.endpoint | quote }}
+  MINIO_BUCKET: {{ .Values.stores.minio.bucket | quote }}
+  MINIO_BUCKET_STAGING: {{ .Values.stores.minio.bucketStaging | quote }}
+  QUERY_BASE_URL: {{ printf "http://%s-query:%v" (include "hybrid-rag.fullname" .) .Values.query.port | quote }}

@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "updated": "2026-07-11",
+  "tag_patterns": {
+    "platform": "rag-v{major}.{minor}.{patch}",
+    "infra": "infra-v{major}.{minor}.{patch}",
+    "inference": "inf-v{major}.{minor}.{patch}",
+    "observability": "obs-v{major}.{minor}.{patch}",
+    "ingest": "ingest-v{major}.{minor}.{patch}",
+    "query": "query-v{major}.{minor}.{patch}"
+  },
+  "releases": [
+    {
+      "platform": "rag-v1.0.0",
+      "status": "target",
+      "index_schema_version": 1,
+      "sub_projects": {
+        "infra": "infra-v1.0.0",
+        "inference": "inf-v1.0.0",
+        "observability": "obs-v1.0.0",
+        "ingest": "ingest-v1.0.0",
+        "query": "query-v1.0.0"
+      },
+      "notes": "First implementable release train — contract tests green, index_schema_version=1"
+    },
+    {
+      "platform": "rag-v1.0.0",
+      "status": "compatible",
+      "index_schema_version": 1,
+      "sub_projects": {
+        "infra": "infra-v1.1.0",
+        "inference": "inf-v1.0.0",
+        "observability": "obs-v1.0.0",
+        "ingest": "ingest-v1.0.0",
+        "query": "query-v1.0.0"
+      },
+      "notes": "infra adds Keycloak realm tweaks — no schema break"
+    },
+    {
+      "platform": "rag-v1.1.0",
+      "status": "planned",
+      "index_schema_version": 2,
+      "sub_projects": {
+        "infra": "infra-v1.0.0",
+        "inference": "inf-v1.0.0",
+        "observability": "obs-v1.1.0",
+        "ingest": "ingest-v1.1.0",
+        "query": "query-v1.1.0"
+      },
+      "notes": "index_schema_version=2 — full reindex required"
+    }
+  ],
+  "breaking_changes": [
+    {
+      "kind": "index_schema_version",
+      "description": "Bump requires coordinated infra init-db + ingest migrate + full reindex"
+    },
+    {
+      "kind": "mcp_sse_event",
+      "description": "SSE event shape change requires query + mod-chat coordinated release"
+    },
+    {
+      "kind": "mcp_tool_removed",
+      "description": "Removed MCP tool requires deprecation window in release notes"
+    }
+  ],
+  "config_index_schema_version": {
+    "infra": "infra/config/infra.toml.example",
+    "ingest": "ingest/config/ingest.toml.example",
+    "query": "query/config/query.toml.example"
+  }
+}

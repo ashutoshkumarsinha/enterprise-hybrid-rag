@@ -33,7 +33,7 @@ def test_ingest_completed_bumps_cache_version() -> None:
     assert get_cached_answer(state) == payload
     handle_event(
         {
-            "type": "ingest.completed",
+            "event": "ingest.completed",
             "tenant_id": "acme",
             "collection_id": "docs",
             "cache_bump": True,

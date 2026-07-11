@@ -1,0 +1,12 @@
+apiVersion: v2
+name: hybrid-rag
+description: Enterprise Hybrid RAG — query, ingest, optional mod-chat (E-19 sketch)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - rag
+  - mcp
+  - enterprise
+maintainers:
+  - name: platform-team

@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from app.langsmith_config import ingest_traceable
 from app.parsers.base import ParsedBlock
 from app.parsers.docling import parse_docling_file
 from app.parsers.docx import parse_docx_file
@@ -42,6 +43,7 @@ def resolve_parser_kind(path: Path, *, profile: str = "fast", manifest_parser: s
     return kind
 
 
+@ingest_traceable("ingest.parser.parse_file", run_type="parser")
 def parse_file_blocks(
     path: Path | str,
     *,

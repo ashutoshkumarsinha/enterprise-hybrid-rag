@@ -121,7 +121,9 @@ def sync_collection(
     publish_ingest_completed(
         tenant_id=tenant_id,
         collection_id=collection_id,
+        version_id=version_id,
         job_id=job_id,
         chunk_count=chunk_total,
+        error_count=len(errors),
     )
     return summary

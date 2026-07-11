@@ -44,8 +44,8 @@ This document is the **living plan** for spec depth, implementation phases, and 
 |----|-------------|--------------|--------|
 | E-01 | IF-6 Identity + MCP token auth | §3.3, §7.13, §9.2 | **Done v0.28** — `auth.py`, `jwt_auth.py`, `token_store.py` |
 | E-02 | Canonical bootstrap runbook + health gates | §12.5 | **Done** |
-| E-03 | Sub-project release tag + compatibility matrix | §12.6 | Partial |
-| E-04 | Packer / image naming convention | §12.7 | Partial |
+| E-03 | Sub-project release tag + compatibility matrix | §12.6 | **Done** — `docs/RELEASE_MATRIX.md`, `docs/releases/compatibility.json` |
+| E-04 | Packer / image naming convention | §12.7 | **Done** — `docs/releases/images.json`, `packer/versions.pkrvars.hcl.example` glossary |
 | E-05 | Auth layering: token-first + optional JWT bridge | §7.10, §7.13 | **Done** v0.26 |
 | E-06 | OTel span catalog aligned with Langfuse hierarchy | §10.4 | **Done** — wire in code pending |
 | E-07 | Performance guide + baselines | **Done v0.13** | `docs/PERFORMANCE.md` |
@@ -71,11 +71,11 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | ID | Enhancement | Deliverable | Status |
 |----|-------------|-------------|--------|
 | E-14 | Catalog migrations + runner | `migrate.py`, `make migrate` | **Done v0.28** |
-| E-15 | Contract test suite | `query/tests/contract/` | **Partial** — query 34+; ingest chunk schema + parsers (v0.32) |
+| E-15 | Contract test suite | `query/tests/contract/` | **Done** — all 11 kernel schemas + §14 manifest + `query_ro` grants |
 | E-16 | ACL grant API + admin tools | `ingest/app/acl_store.py`, `acl_handlers.py` | **Done v0.34** |
 | E-17 | Connector interface v2 (S3 first) | `ingest/app/connectors/`, `connector_sync.py` | **Done v0.35** |
-| E-18 | mod-chat scaffold (BFF + Keycloak login) | `chat-ui/` | Not started |
-| E-19 | Helm chart sketch | `deploy/helm/` | Not started |
+| E-18 | mod-chat scaffold (BFF + Keycloak login) | `chat-ui/` | **Done** — Express BFF + React/Vite, OIDC stub |
+| E-19 | Helm chart sketch | `deploy/helm/` | **Done** — `hybrid-rag` chart, HPA, ingress, cronjobs |
 
 ### P1.5 — LangGraph implementation (stub → production)
 
@@ -85,17 +85,17 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | LG-2 | vLLM embed + chat streaming in answer node | query | **Done v0.28** — `clients/chat.py`, streaming |
 | LG-3 | Redis query cache node | query | **Done v0.28** — `query_cache.py` |
 | LG-4 | LangSmith + **Ragas** eval from golden set | query | **Done v0.43** — `benchmark_rag.py --ragas` + nightly CI gate |
-| LG-5 | Celery task spans in LangSmith (optional) | ingest | `@traceable` on `batch_write` |
+| LG-5 | Celery task spans in LangSmith (optional) | ingest | **Done** — `@traceable` on `batch_write`, `parse_file_blocks` |
 | LG-6 | MCP conversation session store | query | **Done v0.28** — `session_store.py` + tools |
 
 ### P1.6 — Infra & observability performance
 
 | ID | Item | Sub-project | Deliverable |
 |----|------|-------------|-------------|
-| INF-P1 | Qdrant INT8 quantization init | infra | `scripts/init-db.sh` extension |
-| INF-P2 | Postgres catalog indexes | infra | `scripts/postgres-catalog-indexes.sql` |
-| INF-P3 | Redis `maxmemory` in compose | infra | `compose/docker-compose.yml` |
-| INF-P4 | Qdrant gRPC 6334 documented in compose | infra | port mapping + consumer docs |
+| INF-P1 | Qdrant INT8 quantization init | infra | **Done** — `init-db.sh`, `QDRANT_INT8_QUANTIZATION` |
+| INF-P2 | Postgres catalog indexes | infra | **Done** — `postgres-catalog-indexes.sql` |
+| INF-P3 | Redis `maxmemory` in compose | infra | **Done** — `REDIS_MAXMEMORY` in compose |
+| INF-P4 | Qdrant gRPC 6334 documented in compose | infra | **Done** — port 6334 + `PREFER_QDRANT_GRPC` |
 | OBS-P1 | Probabilistic trace sampler | observability | **Done** — `collector/otel-collector-config.prod.yaml` |
 | OBS-P2 | Query attribute truncation processor | observability | collector config |
 | OBS-P3 | `benchmark_rag.py --compare-otel` | query | **Done v0.47** — CI gate < 5% p95 overhead |
@@ -113,7 +113,7 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | E-44 | Session retention prune job | **Done** — `session_prune.py`, `POST /admin/sessions/prune`, `make prune-sessions` |
 | E-24 | Multi-region read replica story | spec §12.4 expansion |
 | E-25 | Embedding dimension migration playbook | resolves OQ2 |
-| E-26 | Chaos test suite automation | spec §13.1 monthly staging |
+| E-26 | Chaos test suite automation | **Done** — `scripts/chaos/`, `make chaos-staging`, monthly workflow |
 | E-27 | Tenant quota admin API | `PUT /admin/tenants/{id}/quotas` | **Done v0.49** (ingest) |
 | E-28 | Circuit breaker implementation | query `client_factory.py` | **Done v0.31** |
 | E-29 | Load test harness (`load_test.py`) | k6/locust wrapper | **Done v0.48** |
