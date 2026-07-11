@@ -126,7 +126,7 @@ Use when APM dashboards and SLO alerting exceed Jaeger capabilities. Normative s
 | Single SDK endpoint | Apps → primary collector `:4317` only |
 | Fan-out | Collector `otlp/signoz` → `signoz-otel-collector` or managed endpoint |
 | Config | `collector/otel-collector-config.signoz.yaml` |
-| Metrics | `rag_ttft_ms`, `rag_stage_ms` histograms when `[signoz].enabled` (FR-40) |
+| Metrics | `rag_ttft_ms`, `rag_stage_ms` via `OTEL_METRICS_EXPORTER=otlp` or `SIGNOZ_ENABLED=true` (FR-40) | **Done** in `query/app/otel_metrics.py` |
 | Dashboards | `dashboards/signoz-*.json` stubs — import via SigNoz UI |
 | Alerts | `alerts/signoz-rules.yaml` |
 

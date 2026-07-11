@@ -139,7 +139,7 @@ When `[signoz].enabled = true`, emit OTLP histograms per platform §10.5.3:
 | `ingest_chunks_per_second` | — |
 | `celery_queue_depth` | `queue` |
 
-Implement in `query/app/telemetry.py` and `ingest/app/telemetry.py` (pending — see §22 LG implementation bundle).
+Implement in `query/app/otel_metrics.py` (wired from `query/app/telemetry.py`) and ingest metrics (future).
 
 ---
 

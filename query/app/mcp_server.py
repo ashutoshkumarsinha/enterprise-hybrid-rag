@@ -28,6 +28,7 @@ from app.metrics import metrics_snapshot
 from app.rate_limit import acquire_stream_slot, assert_query_admission, release_stream_slot
 from app.rbac import require_permission
 from app.research_streaming import stream_research_events
+from app.session_prune import prune_sessions
 from app.session_store import create_session_store
 from app.settings import get_settings
 from app.telemetry import get_tracer, setup_otel
@@ -53,7 +54,7 @@ async def lifespan(app: FastAPI):
     await stop_event_subscriber()
 
 
-app = FastAPI(title="hybrid-rag-query", version="0.8.0-metrics", lifespan=lifespan)
+app = FastAPI(title="hybrid-rag-query", version="0.9.1-session-prune", lifespan=lifespan)
 setup_otel(app)
 setup_langsmith()
 
@@ -73,6 +74,7 @@ def healthz():
     from app.query_cache import redis_healthcheck
 
     qdrant_ok = get_qdrant_client().healthcheck()
+    qdrant = get_qdrant_client()
     embed_ok = get_embed_client().healthcheck()
     chat_ok = get_chat_client().healthcheck()
     reranker_ok = get_reranker_client().healthcheck()
@@ -95,6 +97,8 @@ def healthz():
         "langsmith_tracing": os.environ.get("LANGCHAIN_TRACING_V2", "false"),
         "checks": {
             "qdrant_ok": qdrant_ok,
+            "qdrant_transport": qdrant.transport,
+            "qdrant_grpc_port": qdrant.grpc_port if qdrant.transport == "grpc" else None,
             "neo4j_ok": neo4j_ok,
             "redis_ok": redis_ok,
             "inference_ok": embed_ok and chat_ok,
@@ -329,6 +333,26 @@ async def admin_revoke_token(
     if result is None:
         raise HTTPException(status_code=404, detail={"code": "token_not_found"})
     return result
+
+
+@app.post("/admin/sessions/prune")
+async def admin_prune_sessions(
+    request: Request,
+    ctx: AuthContext = Depends(get_auth_context),
+) -> dict:
+    require_permission(ctx, "mcp.admin.tokens")
+    settings = request.app.state.settings
+    body: dict = {}
+    if request.headers.get("content-type", "").startswith("application/json"):
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
+    max_age_days = body.get("max_age_days")
+    if max_age_days is not None:
+        max_age_days = int(max_age_days)
+    if not settings.sessions_enabled:
+        return {"pruned": 0, "max_age_days": settings.session_max_age_days, "skipped": True}
+    return prune_sessions(max_age_days=max_age_days)
 
 
 @app.get("/admin/metrics")

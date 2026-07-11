@@ -34,6 +34,8 @@ cd ../observability && make up
 
 ```bash
 QDRANT_URL=http://qdrant:6333
+QDRANT_GRPC_PORT=6334
+PREFER_QDRANT_GRPC=true
 NEO4J_URI=bolt://neo4j:7687
 NEO4J_USER=neo4j
 NEO4J_PASSWORD=...
@@ -50,6 +52,8 @@ MINIO_PRESIGN_TTL_SECONDS=3600
 
 ```bash
 QDRANT_URL=http://qdrant:6333
+QDRANT_GRPC_PORT=6334
+PREFER_QDRANT_GRPC=true
 NEO4J_URI=bolt://neo4j:7687
 REDIS_URL=redis://redis:6379/0
 CELERY_BROKER_URL=redis://redis:6379/1

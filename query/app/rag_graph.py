@@ -29,6 +29,7 @@ from app.client_factory import (
 )
 from app.langsmith_config import setup_langsmith
 from app.query_cache import get_cached_answer, set_cached_answer
+from app.otel_metrics import record_rag_stage_ms
 from app.rag_answer import answer_updates
 from app.rag_state import RAGState
 
@@ -42,7 +43,9 @@ def _tick(state: RAGState, stage: str, start: float) -> dict:
     Every node should call this so FR-09 telemetry is consistent even in stubs.
     """
     timings = dict(state.get("timings_ms") or {})
-    timings[stage] = int((time.perf_counter() - start) * 1000)
+    elapsed_ms = int((time.perf_counter() - start) * 1000)
+    timings[stage] = elapsed_ms
+    record_rag_stage_ms(stage, elapsed_ms, tenant_id=state.get("tenant_id"))
     return {"timings_ms": timings}
 
 

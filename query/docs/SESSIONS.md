@@ -109,6 +109,17 @@ max_age_days = 90
 CATALOG_DSN_SESSION=postgresql://query_session_rw:***@postgres:5432/catalog
 ```
 
+**Retention:** Nightly prune via `make prune-sessions` or `POST /admin/sessions/prune` (E-44). Default `SESSION_MAX_AGE_DAYS=90` soft-deletes sessions with `updated_at` older than the cutoff.
+
+```bash
+# Cron / K8s CronJob (query container)
+cd query && python -m app.session_prune
+```
+
+| Env | Default |
+|-----|---------|
+| `SESSION_MAX_AGE_DAYS` | `90` |
+
 Apply DDL: `psql $CATALOG_DSN -f ingest/migrations/002_conversation_sessions_v1.sql`
 
 ---

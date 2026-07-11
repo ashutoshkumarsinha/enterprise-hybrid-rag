@@ -166,7 +166,7 @@ See [CADDY.md](./CADDY.md).
 | INF-P2 | Postgres catalog index DDL in `init-db.sh` | **Done** — `scripts/postgres-catalog-indexes.sql` + `init-catalog-indexes` |
 | INF-P3 | Redis `maxmemory` + LRU in compose | **Done** — `REDIS_MAXMEMORY` / `REDIS_MAXMEMORY_POLICY` in compose |
 | INF-P4 | Caddy SSE `flush_interval -1` in `Caddyfile.example` | **Done** — `/mcp/*` + `/research/stream` |
-| INF-P5 | Qdrant gRPC port 6334 exposed in compose docs | planned |
+| INF-P5 | Qdrant gRPC port 6334 exposed in compose docs | **Done** — compose + `PREFER_QDRANT_GRPC` consumer env |
 | INF-P6 | Neo4j read replica notes for scale-out | future |
 
 **v1.0 gate:** INF-P1–P4 MUST be implemented before `infra-v1.0` tag.

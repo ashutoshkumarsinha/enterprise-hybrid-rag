@@ -11,6 +11,7 @@ from app.client_factory import get_breakers, get_chat_client
 from app.circuit_breaker import breakers_enabled
 from app.models import AuthContext
 from app.mcp_format import format_research_markdown
+from app.otel_metrics import record_rag_ttft_ms
 from app.query_cache import set_cached_answer
 from app.rag_answer import answer_updates
 from app.rag_graph import node_answer
@@ -86,16 +87,30 @@ async def stream_research_events(
 ) -> AsyncIterator[str]:
     """Yield SSE ``data:`` lines per platform contract §7.9."""
     settings = get_settings()
+    stream_started = time.perf_counter()
+    ttft_recorded = False
     state = state_from_request(body, ctx=ctx, session_store=session_store)
     preflight = advance_to_answer(state)
 
     if preflight.get("from_cache"):
         final = preflight
         async for event in _yield_answer_tokens(final.get("answer_text", "")):
+            if not ttft_recorded:
+                record_rag_ttft_ms(
+                    int((time.perf_counter() - stream_started) * 1000),
+                    tenant_id=state.get("tenant_id"),
+                )
+                ttft_recorded = True
             yield event
     elif preflight.get("abstained"):
         final = _merge_state(preflight, node_answer(preflight))
         async for event in _yield_answer_tokens(final.get("answer_text", "")):
+            if not ttft_recorded:
+                record_rag_ttft_ms(
+                    int((time.perf_counter() - stream_started) * 1000),
+                    tenant_id=state.get("tenant_id"),
+                )
+                ttft_recorded = True
             yield event
     else:
         chat = get_chat_client()
@@ -110,12 +125,24 @@ async def stream_research_events(
                 ),
             )
             async for event in _yield_answer_tokens(final.get("answer_text", "")):
+                if not ttft_recorded:
+                    record_rag_ttft_ms(
+                        int((time.perf_counter() - stream_started) * 1000),
+                        tenant_id=state.get("tenant_id"),
+                    )
+                    ttft_recorded = True
                 yield event
         else:
             parts: list[str] = []
             stream_start = time.perf_counter()
             try:
                 async for token in chat.stream_tokens(preflight):
+                    if not ttft_recorded:
+                        record_rag_ttft_ms(
+                            int((time.perf_counter() - stream_started) * 1000),
+                            tenant_id=state.get("tenant_id"),
+                        )
+                        ttft_recorded = True
                     parts.append(token)
                     yield f"data: {json.dumps({'type': 'token', 'text': token})}\n\n"
                 if breakers_enabled():
@@ -132,6 +159,12 @@ async def stream_research_events(
                     ),
                 )
                 async for event in _yield_answer_tokens(final.get("answer_text", "")):
+                    if not ttft_recorded:
+                        record_rag_ttft_ms(
+                            int((time.perf_counter() - stream_started) * 1000),
+                            tenant_id=state.get("tenant_id"),
+                        )
+                        ttft_recorded = True
                     yield event
                 parts = [final.get("answer_text", "")]
             else:

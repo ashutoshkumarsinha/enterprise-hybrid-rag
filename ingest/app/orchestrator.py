@@ -35,6 +35,12 @@ def _parser_profile() -> str:
     return os.environ.get("PARSER_PROFILE", "fast")
 
 
+def _qdrant_transport() -> str:
+    from app.clients.qdrant import QdrantWriter
+
+    return QdrantWriter().transport
+
+
 @app.get("/admin/healthz")
 def healthz() -> dict:
     with tracer.start_as_current_span("ingest.healthz"):
@@ -48,6 +54,7 @@ def healthz() -> dict:
                 "celery_ok": True,
                 "redis_broker_ok": True,
                 "qdrant_write_ok": os.environ.get("QDRANT_STUB", "true").lower() in ("true", "1", "yes"),
+                "qdrant_transport": _qdrant_transport(),
                 "neo4j_write_ok": os.environ.get("NEO4J_STUB", "true").lower() in ("true", "1", "yes"),
                 "catalog_ok": (
                     get_acl_store().healthcheck()

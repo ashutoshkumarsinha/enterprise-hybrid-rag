@@ -35,6 +35,7 @@ class Settings:
 
     sessions_enabled: bool = True
     max_history_turns: int = 10
+    session_max_age_days: int = 90
     token_default_ttl_days: int = 90
 
     catalog_dsn_ro: str | None = None
@@ -86,6 +87,7 @@ def get_settings() -> Settings:
         default_principal=os.environ.get("DEFAULT_PRINCIPAL", "user:dev"),
         sessions_enabled=_env_bool("SESSIONS_ENABLED", True),
         max_history_turns=_env_int("SESSIONS_MAX_HISTORY_TURNS", 10),
+        session_max_age_days=_env_int("SESSION_MAX_AGE_DAYS", 90),
         token_default_ttl_days=_env_int("TOKEN_DEFAULT_TTL_DAYS", 90),
         catalog_dsn_ro=os.environ.get("CATALOG_DSN_RO"),
         catalog_dsn_token=os.environ.get("CATALOG_DSN_TOKEN"),

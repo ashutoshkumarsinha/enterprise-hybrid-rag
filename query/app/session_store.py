@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import uuid
 from abc import ABC, abstractmethod
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from app.settings import Settings, get_settings
@@ -89,6 +89,10 @@ class SessionStore(ABC):
 
     @abstractmethod
     def delete_session(self, session_id: str, *, tenant_id: str, principal: str) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
+    def prune_stale_sessions(self, *, max_age_days: int) -> dict[str, int]:
         raise NotImplementedError
 
     @abstractmethod
@@ -267,6 +271,21 @@ class InMemorySessionStore(SessionStore):
         stored = self._sessions[session_id]
         stored["message_count"] = stored.get("message_count", 0) + 2
         stored["updated_at"] = now
+
+
+    def prune_stale_sessions(self, *, max_age_days: int) -> dict[str, int]:
+        cutoff = _now() - timedelta(days=max_age_days)
+        pruned = 0
+        for row in self._sessions.values():
+            if row.get("deleted_at") is not None:
+                continue
+            updated_at = datetime.fromisoformat(str(row["updated_at"]).replace("Z", "+00:00"))
+            if updated_at.tzinfo is None:
+                updated_at = updated_at.replace(tzinfo=UTC)
+            if updated_at < cutoff:
+                row["deleted_at"] = _now().isoformat()
+                pruned += 1
+        return {"pruned": pruned, "max_age_days": max_age_days}
 
 
 class PostgresSessionStore(SessionStore):
@@ -514,6 +533,22 @@ class PostgresSessionStore(SessionStore):
                     ),
                 )
             conn.commit()
+
+    def prune_stale_sessions(self, *, max_age_days: int) -> dict[str, int]:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE conversation_sessions
+                    SET deleted_at = now(), updated_at = now()
+                    WHERE deleted_at IS NULL
+                      AND updated_at < now() - make_interval(days => %s)
+                    """,
+                    (max_age_days,),
+                )
+                pruned = cur.rowcount
+            conn.commit()
+        return {"pruned": int(pruned), "max_age_days": max_age_days}
 
 
 def _session_from_row(row: tuple) -> SessionRow:

@@ -61,9 +61,16 @@ Without indexes, filtered hybrid search degrades linearly with corpus size.
 
 ## Query client guidance
 
-- Prefer **gRPC** port 6334 over REST 6333 for lower retrieve latency
+- Prefer **gRPC** port **6334** over REST **6333** for retrieve/upsert (`PREFER_QDRANT_GRPC=true`)
+- `QDRANT_URL` remains the REST base URL for health/init; clients derive host for gRPC
 - Always include `tenant_id` + `collection_id` in filter — reduces search space
-- See [PERFORMANCE.md](../../docs/PERFORMANCE.md) §4.1
+
+| Env | Default (dev stub) | Live stack |
+|-----|-------------------|------------|
+| `QDRANT_GRPC_PORT` | `6334` | `6334` (compose maps host port) |
+| `PREFER_QDRANT_GRPC` | `false` | `true` |
+
+`GET /healthz` on query reports `checks.qdrant_transport` (`stub` \| `grpc` \| `rest`).
 
 ## Consumers
 

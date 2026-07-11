@@ -33,17 +33,24 @@ class QdrantClient:
             "PREFER_QDRANT_GRPC", ""
         ).lower() in ("true", "1", "yes")
         self._stub = os.environ.get("QDRANT_STUB", "").lower() in ("true", "1", "yes") or not self.url
+        self.prefer_grpc = prefer and not self._stub
         self.search_ef = search_ef or int(os.environ.get("QDRANT_SEARCH_EF", "128"))
         self.recall_limit = recall_limit or int(os.environ.get("FINAL_RECALL_LIMIT", "25"))
         self._client = None
         if not self._stub:
             from qdrant_client import QdrantClient as QdrantSDK
 
-            if prefer:
+            if self.prefer_grpc:
                 host = self.url.replace("http://", "").replace("https://", "").split(":")[0]
                 self._client = QdrantSDK(host=host, grpc_port=self.grpc_port, prefer_grpc=True)
             else:
                 self._client = QdrantSDK(url=self.url)
+
+    @property
+    def transport(self) -> str:
+        if self._stub:
+            return "stub"
+        return "grpc" if self.prefer_grpc else "rest"
 
     @property
     def is_stub(self) -> bool:

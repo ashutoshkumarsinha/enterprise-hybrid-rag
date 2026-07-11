@@ -39,16 +39,23 @@ class QdrantWriter:
         ).lower() in ("true", "1", "yes")
         self.upsert_batch = upsert_batch or int(os.environ.get("QDRANT_UPSERT_BATCH", "100"))
         self._stub = os.environ.get("QDRANT_STUB", "").lower() in ("true", "1", "yes") or not self.url
+        self.prefer_grpc = prefer and not self._stub
         self._client = None
         self._indexes_ensured = False
         if not self._stub:
             from qdrant_client import QdrantClient
 
-            if prefer:
+            if self.prefer_grpc:
                 host = self.url.replace("http://", "").replace("https://", "").split(":")[0]
                 self._client = QdrantClient(host=host, grpc_port=self.grpc_port, prefer_grpc=True)
             else:
                 self._client = QdrantClient(url=self.url)
+
+    @property
+    def transport(self) -> str:
+        if self._stub:
+            return "stub"
+        return "grpc" if self.prefer_grpc else "rest"
 
     @property
     def is_stub(self) -> bool:

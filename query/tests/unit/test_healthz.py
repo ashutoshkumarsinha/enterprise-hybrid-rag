@@ -31,6 +31,8 @@ def health_client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
 def test_healthz_returns_503_when_qdrant_unhealthy(health_client: TestClient) -> None:
     mock_qdrant = MagicMock()
     mock_qdrant.healthcheck.return_value = False
+    mock_qdrant.transport = "grpc"
+    mock_qdrant.grpc_port = 6334
     mock_embed = MagicMock()
     mock_embed.healthcheck.return_value = True
     mock_chat = MagicMock()

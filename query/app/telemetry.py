@@ -17,6 +17,9 @@ def reset_otel() -> None:
     global _CONFIGURED, _BENCHMARK_EXPORTER
     _CONFIGURED = False
     _BENCHMARK_EXPORTER = None
+    from app.otel_metrics import reset_otel_metrics
+
+    reset_otel_metrics()
     from opentelemetry import trace
     from opentelemetry.trace import NoOpTracerProvider
 
@@ -85,6 +88,9 @@ def setup_otel(app: FastAPI | None = None) -> None:
         )
 
     _CONFIGURED = True
+    from app.otel_metrics import setup_otel_metrics
+
+    setup_otel_metrics()
 
 
 def get_tracer(name: str = "hybrid-rag-query"):
