@@ -11,6 +11,7 @@ from threading import Lock
 from fastapi import HTTPException
 
 from app.models import AuthContext
+from app.metrics import record_rate_limit_rejected
 from app.quota_store import get_quota_store
 
 
@@ -193,6 +194,7 @@ def assert_query_admission(ctx: AuthContext) -> AdmissionResult:
         user_limit=user_queries_per_minute(),
     )
     if not result.allowed:
+        record_rate_limit_rejected(kind="queries_per_minute", tenant_id=ctx.tenant_id)
         raise HTTPException(
             status_code=429,
             detail={
@@ -209,12 +211,17 @@ def acquire_stream_slot(ctx: AuthContext) -> None:
     if not rate_limit_enabled():
         return
     limits = get_quota_store().get_limits(ctx.tenant_id)
-    get_limiter().acquire_stream(
-        tenant_id=ctx.tenant_id,
-        principal=ctx.principal,
-        tenant_limit=limits.max_concurrent_streams,
-        user_limit=user_max_concurrent_streams(),
-    )
+    try:
+        get_limiter().acquire_stream(
+            tenant_id=ctx.tenant_id,
+            principal=ctx.principal,
+            tenant_limit=limits.max_concurrent_streams,
+            user_limit=user_max_concurrent_streams(),
+        )
+    except HTTPException as exc:
+        if exc.status_code == 429:
+            record_rate_limit_rejected(kind="concurrent_streams", tenant_id=ctx.tenant_id)
+        raise
 
 
 def release_stream_slot(ctx: AuthContext) -> None:

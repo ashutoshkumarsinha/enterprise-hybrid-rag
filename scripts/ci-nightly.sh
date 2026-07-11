@@ -77,4 +77,24 @@ echo "==> compare_benchmark_run"
   fi
 )
 
+echo "==> smoke_test --e2e"
+(
+  cd query
+  PY=python3
+  if [[ -x "${ROOT}/query/.venv/bin/python" ]]; then PY="${ROOT}/query/.venv/bin/python"; fi
+  SMOKE_ARGS=(--e2e --output benchmarks/last_smoke_e2e.json --warn-total-ms 120000)
+  if [[ -n "${QUERY_BASE_URL:-}" ]]; then
+  SMOKE_ARGS+=(--url "${QUERY_BASE_URL}")
+  if [[ -n "${INGEST_BASE_URL:-}" ]]; then
+    SMOKE_ARGS+=(--ingest-url "${INGEST_BASE_URL}")
+  fi
+  else
+    SMOKE_ARGS+=(--in-process)
+  fi
+  "$PY" benchmarks/smoke_test.py "${SMOKE_ARGS[@]}" || {
+    if [[ "${LIVE_STACK_STRICT:-0}" == "1" ]]; then exit 1; fi
+    echo "WARN: smoke e2e failed (LIVE_STACK_STRICT=0)"
+  }
+)
+
 echo "Nightly pipeline OK"

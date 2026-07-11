@@ -20,6 +20,17 @@ make init-db
 
 Creates collection with dense + sparse vectors if missing. Payload indexes are created by `hybrid-rag-ingest` on first upsert per SHARED_CONTRACTS.
 
+### Collection tuning (INF-P1)
+
+`make init-db` applies `on_disk_payload` and optional INT8 scalar quantization:
+
+| Env | Default | Purpose |
+|-----|---------|---------|
+| `QDRANT_ON_DISK_PAYLOAD` | `true` | Keep payloads on disk at scale (>100k chunks) |
+| `QDRANT_INT8_QUANTIZATION` | `false` (dev) | Enable INT8 scalar quant for >500k chunks (`prod_500k` profile) |
+
+Existing collections are patched idempotently via `PATCH /collections/{name}`.
+
 ## HNSW tuning (`config/infra.toml`)
 
 | Key | Default | Notes |

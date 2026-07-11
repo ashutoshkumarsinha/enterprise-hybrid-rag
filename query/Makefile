@@ -4,7 +4,7 @@ REGISTRY ?=
 PUSH     ?= false
 PACKER_ARGS := -var "image_tag=$(IMAGE_TAG)" -var "registry=$(REGISTRY)" -var "push=$(PUSH)"
 
-.PHONY: network up down health logs build lint format integration benchmark benchmark-nightly packer-init packer-validate packer-build
+.PHONY: network up down health logs build lint format integration benchmark benchmark-nightly smoke-e2e packer-init packer-validate packer-build
 
 network:
 	docker network inspect hybrid-rag-net >/dev/null 2>&1 || docker network create hybrid-rag-net
@@ -41,6 +41,9 @@ benchmark-nightly: ## Nightly benchmark + Ragas + baseline compare
 	else \
 		echo "SKIP compare: benchmarks/baselines.json not present"; \
 	fi
+
+smoke-e2e: ## E2E smoke (in-process stub or QUERY_BASE_URL)
+	@python benchmarks/smoke_test.py --e2e --in-process --warn-total-ms 45000
 
 integration: ## Live-stack integration tests (see .env.live.example + scripts/run-integration.sh)
 	@chmod +x scripts/run-integration.sh 2>/dev/null || true

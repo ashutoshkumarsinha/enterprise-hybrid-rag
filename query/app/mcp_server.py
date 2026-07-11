@@ -24,6 +24,7 @@ from app.mcp_handlers import (
     handle_list_sessions,
     handle_research_documents,
 )
+from app.metrics import metrics_snapshot
 from app.rate_limit import acquire_stream_slot, assert_query_admission, release_stream_slot
 from app.rbac import require_permission
 from app.research_streaming import stream_research_events
@@ -52,7 +53,7 @@ async def lifespan(app: FastAPI):
     await stop_event_subscriber()
 
 
-app = FastAPI(title="hybrid-rag-query", version="0.7.0-admission", lifespan=lifespan)
+app = FastAPI(title="hybrid-rag-query", version="0.8.0-metrics", lifespan=lifespan)
 setup_otel(app)
 setup_langsmith()
 
@@ -101,6 +102,7 @@ def healthz():
             "reranker_ok": reranker_ok,
         },
         "circuit_breakers": breaker_snapshots(),
+        "metrics": metrics_snapshot(),
     }
     if not research_ready:
         return JSONResponse(status_code=503, content=body)
@@ -327,6 +329,14 @@ async def admin_revoke_token(
     if result is None:
         raise HTTPException(status_code=404, detail={"code": "token_not_found"})
     return result
+
+
+@app.get("/admin/metrics")
+def admin_metrics() -> dict:
+    return {
+        "module": "hybrid-rag-query",
+        "metrics": metrics_snapshot(),
+    }
 
 
 @app.get("/")

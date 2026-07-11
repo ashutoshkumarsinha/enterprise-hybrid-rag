@@ -6,6 +6,7 @@ import pytest
 from fastapi import HTTPException
 
 from app.models import AuthContext
+from app.metrics import reset_metrics
 from app.quota_store import InMemoryQuotaStore, reset_quota_store
 from app.rate_limit import (
     _InMemoryLimiter,
@@ -26,6 +27,7 @@ def _reset_stores(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MAX_CONCURRENT_STREAMS_PER_TENANT", "2")
     reset_rate_limiter()
     reset_quota_store()
+    reset_metrics()
 
 
 def _ctx(tenant: str = "acme", principal: str = "user:alice") -> AuthContext:

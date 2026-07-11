@@ -220,7 +220,7 @@ logs: ## Show how to tail logs per plane (use infra-logs, query-logs, …)
 # Code quality (§23, docs/CODING_STANDARDS.md)
 # ---------------------------------------------------------------------------
 
-.PHONY: lint format test test-unit test-contract test-pr test-nightly benchmark-pr benchmark-ingest-pr
+.PHONY: lint format test test-unit test-contract test-pr test-nightly benchmark-pr benchmark-ingest-pr smoke-e2e
 lint: ## Ruff + Black check on application Python
 	@command -v ruff >/dev/null 2>&1 || { echo "Install: pip install ruff black"; exit 1; }
 	@command -v black >/dev/null 2>&1 || { echo "Install: pip install ruff black"; exit 1; }
@@ -248,6 +248,10 @@ benchmark-pr: ## Stub golden-set benchmark with warn thresholds (PR tier)
 benchmark-ingest-pr: ## Mock ingest throughput warn tier (PR)
 	@cd $(INGEST_DIR) && PY=$$( [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3 ); \
 	$$PY benchmarks/benchmark_ingest.py --mock --chunks 500 --warn-chunks-per-min 1000
+
+smoke-e2e: ## In-process E2E smoke (query)
+	@cd $(QUERY_DIR) && PY=$$( [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3 ); \
+	$$PY benchmarks/smoke_test.py --e2e --in-process --warn-total-ms 45000
 
 test-nightly: ## Nightly gate — PR suite + integration + benchmark + compare
 	@chmod +x scripts/ci-nightly.sh scripts/ci-pr.sh 2>/dev/null || true

@@ -162,10 +162,10 @@ See [CADDY.md](./CADDY.md).
 
 | ID | Optimization | Status |
 |----|--------------|--------|
-| INF-P1 | Qdrant INT8 quantization init script | planned |
+| INF-P1 | Qdrant INT8 quantization init script | **Done** — `init-db.sh` + `QDRANT_INT8_QUANTIZATION` |
 | INF-P2 | Postgres catalog index DDL in `init-db.sh` | **Done** — `scripts/postgres-catalog-indexes.sql` + `init-catalog-indexes` |
-| INF-P3 | Caddy SSE `flush_interval -1` in `Caddyfile.example` | planned |
-| INF-P4 | Redis `maxmemory` + LRU in compose for DB 0 | planned |
+| INF-P3 | Redis `maxmemory` + LRU in compose | **Done** — `REDIS_MAXMEMORY` / `REDIS_MAXMEMORY_POLICY` in compose |
+| INF-P4 | Caddy SSE `flush_interval -1` in `Caddyfile.example` | planned |
 | INF-P5 | Qdrant gRPC port 6334 exposed in compose docs | planned |
 | INF-P6 | Neo4j read replica notes for scale-out | future |
 

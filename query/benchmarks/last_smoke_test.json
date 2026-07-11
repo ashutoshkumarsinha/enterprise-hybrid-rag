@@ -1,0 +1,53 @@
+{
+  "run_at": "2026-07-11T03:52:09.759421+00:00",
+  "mode": "in_process",
+  "query_url": null,
+  "ingest_url": null,
+  "query": "How do I rotate API keys?",
+  "tenant_id": "dev",
+  "collection_id": "payments-api",
+  "query_health": {
+    "status": 200,
+    "latency_ms": 0,
+    "ok": true,
+    "body": {
+      "status": "ok",
+      "in_process": true
+    }
+  },
+  "research_stream": {
+    "status": 200,
+    "ok": true,
+    "ttft_ms": 8,
+    "total_ms": 8,
+    "event_types": [
+      "token",
+      "token",
+      "token",
+      "token",
+      "token",
+      "token",
+      "token",
+      "token",
+      "token",
+      "token",
+      "sources",
+      "telemetry",
+      "done"
+    ],
+    "timings_ms": {
+      "cache_hit": 0,
+      "supervisor": 0,
+      "embed": 0,
+      "scope": 0,
+      "retrieve": 0,
+      "rerank": 0,
+      "graph": 0,
+      "answer": 0
+    },
+    "stub": true,
+    "abstained": false,
+    "error": null
+  },
+  "passed": true
+}
