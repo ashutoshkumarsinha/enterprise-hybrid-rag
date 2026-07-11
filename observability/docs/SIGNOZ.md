@@ -151,7 +151,13 @@ Implement in `query/app/otel_metrics.py` (wired from `query/app/telemetry.py`) a
 | [`dashboards/signoz-ingest-throughput.json`](../dashboards/signoz-ingest-throughput.json) | chunks/s, queue depth |
 | [`dashboards/langfuse-hybrid-rag.json`](../dashboards/langfuse-hybrid-rag.json) | LLM cost (Langfuse) |
 
-Import via SigNoz UI. API automation tracked as E-23.
+Import via SigNoz UI **or** automation (E-23):
+
+```bash
+cd observability
+make import-signoz                         # dry-run (default)
+python scripts/import_signoz.py --apply    # POST when SIGNOZ_API_URL is set
+```
 
 ---
 

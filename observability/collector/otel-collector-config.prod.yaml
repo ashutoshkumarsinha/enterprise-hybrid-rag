@@ -1,0 +1,93 @@
+# OpenTelemetry Collector — production profile (OBS-P1, OBS-P2)
+# Platform spec: ENTERPRISE_HYBRID_RAG_SPEC.md §10.5, observability/docs/PERFORMANCE.md §3
+#
+# Usage:
+#   export TRACE_SAMPLING_PERCENTAGE=25
+#   export COLLECTOR_CONFIG=../collector/otel-collector-config.prod.yaml
+#   cd observability && make up PROFILE=prod
+#
+# Traces: 25% probabilistic sampling (override via TRACE_SAMPLING_PERCENTAGE).
+# Metrics: full fidelity — no sampling.
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  pprof:
+    endpoint: 0.0.0.0:1777
+  zpages:
+    endpoint: 0.0.0.0:55679
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins: ["*"]
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+    send_batch_max_size: 1024
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: ${env:DEPLOY_ENV}
+        action: upsert
+      - key: service.namespace
+        value: hybrid-rag
+        action: upsert
+  # OBS-P2: truncate long query attributes before export
+  attributes/redact:
+    actions:
+      - key: rag.query
+        action: truncate
+        truncated_length: 120
+      - key: query
+        action: truncate
+        truncated_length: 120
+  # OBS-P1: probabilistic trace sampling at scale
+  probabilistic_sampler:
+    sampling_percentage: ${env:TRACE_SAMPLING_PERCENTAGE}
+
+exporters:
+  debug:
+    verbosity: basic
+    sampling_initial: 2
+    sampling_thereafter: 500
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    const_labels:
+      collector: hybrid-rag-observability
+  otlp/jaeger:
+    endpoint: ${env:JAEGER_OTLP_ENDPOINT}
+    tls:
+      insecure: true
+
+service:
+  extensions: [health_check, pprof, zpages]
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      address: 0.0.0.0:8888
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, attributes/redact, probabilistic_sampler, batch]
+      exporters: [otlp/jaeger]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [debug]

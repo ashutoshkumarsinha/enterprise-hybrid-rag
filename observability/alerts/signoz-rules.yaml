@@ -1,5 +1,6 @@
 # SigNoz alert rules — platform spec §10.5.6
-# Import via SigNoz UI or alertmanager integration (E-23 automation pending).
+# Import via SigNoz UI or alertmanager integration (E-23).
+# Validate with: cd observability && make import-signoz
 #
 # Metric names MUST match ENTERPRISE_HYBRID_RAG_SPEC.md §10.5.3.
 

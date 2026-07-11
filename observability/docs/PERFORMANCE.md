@@ -184,8 +184,8 @@ synthetic_trace_on_health = false
 
 | ID | Optimization | Status |
 |----|--------------|--------|
-| OBS-P1 | `probabilistic_sampler` processor + prod config profile | planned |
-| OBS-P2 | `attributes/redact` for query string truncation in collector | planned |
+| OBS-P1 | `probabilistic_sampler` processor + prod config profile | **done** |
+| OBS-P2 | `attributes/redact` for query string truncation in collector | **done** (signoz + prod configs) |
 | OBS-P3 | `benchmark_rag.py --compare-otel` CI gate | **done** |
 | OBS-P4 | Jaeger persistent storage compose profile | planned |
 | OBS-P5 | Prometheus alert rules for `rag_ttft_ms` p95 | planned |

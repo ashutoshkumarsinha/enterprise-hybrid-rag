@@ -96,7 +96,7 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | INF-P2 | Postgres catalog indexes | infra | `scripts/postgres-catalog-indexes.sql` |
 | INF-P3 | Redis `maxmemory` in compose | infra | `compose/docker-compose.yml` |
 | INF-P4 | Qdrant gRPC 6334 documented in compose | infra | port mapping + consumer docs |
-| OBS-P1 | Probabilistic trace sampler | observability | `collector/otel-collector-config.prod.yaml` |
+| OBS-P1 | Probabilistic trace sampler | observability | **Done** — `collector/otel-collector-config.prod.yaml` |
 | OBS-P2 | Query attribute truncation processor | observability | collector config |
 | OBS-P3 | `benchmark_rag.py --compare-otel` | query | **Done v0.47** — CI gate < 5% p95 overhead |
 | OBS-P4 | Jaeger persistent storage profile | observability | compose profile `jaeger-persist` |
@@ -108,8 +108,8 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | E-34 | mTLS between tiers | infra Caddy + service mesh option |
 | E-21 | Tenant offboarding automation | spec §9.1 purge API |
 | E-22 | Version retention job | nightly Qdrant + Neo4j prune |
-| E-23 | SigNoz dashboards as code | **Partial** — §10.5.5 stubs; API import automation pending |
-| E-44 | Session retention prune job | `sessions.max_age_days` nightly job (was mis-ID E-36 in P2) |
+| E-23 | SigNoz dashboards as code | **Done** — `scripts/import_signoz.py`, dashboard stubs, `signoz-rules.yaml` |
+| E-44 | Session retention prune job | **Done** — `session_prune.py`, `POST /admin/sessions/prune`, `make prune-sessions` |
 | E-24 | Multi-region read replica story | spec §12.4 expansion |
 | E-25 | Embedding dimension migration playbook | resolves OQ2 |
 | E-26 | Chaos test suite automation | spec §13.1 monthly staging |
