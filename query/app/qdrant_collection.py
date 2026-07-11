@@ -27,7 +27,7 @@ def resolve_qdrant_collection(
 
 
 def tenant_suffix(tenant_id: str) -> str | None:
-    """Lookup suffix from env map (dev) or return None for standard tier."""
+    """Lookup suffix from env map; query plane has no catalog write DSN for quotas."""
     raw = os.environ.get("QDRANT_TENANT_SUFFIX_JSON", "")
     if not raw:
         return None

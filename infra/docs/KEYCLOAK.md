@@ -107,3 +107,27 @@ Included in `make health`.
 - Do **not** expose Keycloak admin on the public internet without TLS and IP allowlists
 - `hybrid-rag-query` bearer validation is defense-in-depth with Caddy `MCP_BEARER_TOKEN` — prefer OIDC JWT in multi-tenant prod
 - Keycloak DB credentials live in `infra/.env` only
+
+---
+
+## 9. External IdP federation (OQ4)
+
+Production may **replace** embedded Keycloak with Azure AD, Okta, or another OIDC provider while keeping the same claim contract for `hybrid-rag-query` and `mod-chat`.
+
+| Requirement | Value |
+|-------------|-------|
+| Issuer | Set `OIDC_ISSUER` to external realm URL |
+| JWKS | `JWKS_URI` or auto-discovery from issuer |
+| Audience | `JWT_AUDIENCE` = `hybrid-rag-query` client id |
+| Claims | `tenant_id` (custom) + `sub` + `preferred_username` |
+
+**Steps:**
+
+1. Register `hybrid-rag-query` and `mod-chat` apps in external IdP
+2. Map `tenant_id` via group / custom attribute (same as realm JSON)
+3. Update Helm/query env: `OIDC_ISSUER`, disable dev `JWT_STUB`
+4. Keep **MCP token-first** auth for machine clients (`rag_mcp_*`) — JWT bridge optional per route
+
+**Anti-pattern:** Issuing long-lived MCP tokens from external IdP without rotation — use `POST /admin/mcp/tokens` with TTL.
+
+See also: [`docs/MANAGED_STORES.md`](../../docs/MANAGED_STORES.md) for prod Helm overlays.

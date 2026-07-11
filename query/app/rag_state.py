@@ -57,6 +57,7 @@ class RAGState(TypedDict, total=False):
     tenant_id: str
     collection_id: str
     additional_collection_ids: list[str]
+    scope_strategy: str
     document_id: str | None
     version_id: str | None
     explicit_scope: bool

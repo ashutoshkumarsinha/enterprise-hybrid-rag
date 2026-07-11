@@ -28,6 +28,16 @@ def peer_endpoints() -> dict[str, str]:
     return {str(k): str(v) for k, v in data.items() if v}
 
 
+def tenant_home_region(tenant_id: str) -> str | None:
+    raw = os.environ.get("MCP_TENANT_HOME_REGION_JSON", "{}")
+    try:
+        mapping = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    value = mapping.get(tenant_id)
+    return str(value) if value else None
+
+
 class FederatedCatalogStore(CatalogStore):
     """Merge local catalog reads with optional regional peer query nodes."""
 
@@ -59,7 +69,12 @@ class FederatedCatalogStore(CatalogStore):
         if not self._peers or document_id:
             return docs, next_cursor
         merged = {doc.get("document_id", ""): doc for doc in docs}
-        for region, base_url in self._peers.items():
+        home = tenant_home_region(tenant_id)
+        peer_order = sorted(
+            self._peers.items(),
+            key=lambda item: 0 if home and item[0] == home else 1,
+        )
+        for region, base_url in peer_order:
             if region == mcp_region():
                 continue
             for peer_doc in _fetch_peer_documents(

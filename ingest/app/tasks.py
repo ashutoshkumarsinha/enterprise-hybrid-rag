@@ -36,15 +36,21 @@ def _execute_batch_write(payload: list, job_id: str | None) -> dict:
 
     on_task_start(job_id)
     try:
-        with get_tracer().start_as_current_span(SPAN_JOB_BATCH_WRITE) as span:
-            span.set_attribute("ingest.chunk_count", len(payload))
-            span.set_attribute("module_id", "hybrid-rag-ingest")
-            if job_id:
-                span.set_attribute("ingest.job_id", job_id)
-            result = write_chunks(payload, job_id=job_id)
-            span.set_attribute("ingest.written", result.get("written", 0))
-            span.set_attribute("ingest.validated", result.get("validated", 0))
-            span.set_attribute("ingest.skipped_dedup", result.get("skipped_dedup", 0))
+        tenant_id = None
+        if payload and isinstance(payload[0], dict):
+            tenant_id = payload[0].get("tenant_id")
+        from app.otel_metrics import ingest_stage_timer
+
+        with ingest_stage_timer("batch_write", tenant_id=tenant_id):
+            with get_tracer().start_as_current_span(SPAN_JOB_BATCH_WRITE) as span:
+                span.set_attribute("ingest.chunk_count", len(payload))
+                span.set_attribute("module_id", "hybrid-rag-ingest")
+                if job_id:
+                    span.set_attribute("ingest.job_id", job_id)
+                result = write_chunks(payload, job_id=job_id)
+                span.set_attribute("ingest.written", result.get("written", 0))
+                span.set_attribute("ingest.validated", result.get("validated", 0))
+                span.set_attribute("ingest.skipped_dedup", result.get("skipped_dedup", 0))
         on_task_success(job_id, result)
         return result
     except Exception as exc:

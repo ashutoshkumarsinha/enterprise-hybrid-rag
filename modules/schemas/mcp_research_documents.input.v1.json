@@ -16,6 +16,11 @@
       "maxItems": 8,
       "description": "E-30 cross-collection scope; merged with collection_id"
     },
+    "scope_strategy": {
+      "type": "string",
+      "enum": ["single", "multi_top_k"],
+      "description": "E-30 retrieve strategy; multi_top_k parallelizes per collection"
+    },
     "document_id": { "type": "string" },
     "version_id": { "type": "string" },
     "tags": { "type": "array", "items": { "type": "string" }, "maxItems": 32 },

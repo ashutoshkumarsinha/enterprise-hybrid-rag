@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "target_tag": "rag-v1.0",
+  "updated": "2026-07-11",
+  "automated_gates": [
+    "scripts/validate_config_alignment.py",
+    "scripts/migrate_embed_dimension.py --dry-run",
+    "make validate-release-matrix",
+    "scripts/validate_p1.sh",
+    "scripts/validate_p2.sh",
+    "scripts/validate_p3.sh",
+    "pytest query/tests/unit query/tests/contract",
+    "pytest ingest/tests/unit ingest/tests/contract"
+  ],
+  "optional_live_gates": [
+    "LIVE_STACK=1 pytest query/tests/integration",
+    "RAGAS_GATE=1 query/benchmarks/benchmark_rag.py --ragas",
+    "LOAD_GATE=1 query/benchmarks/load_test.py",
+    "make health (all planes)",
+    "cd ingest && make migrate"
+  ],
+  "manual_checklist": "docs/SPEC_ROADMAP.md section 4"
+}

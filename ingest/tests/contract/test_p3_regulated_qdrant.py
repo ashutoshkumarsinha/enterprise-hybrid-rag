@@ -41,3 +41,11 @@ def test_query_resolver_exists() -> None:
 def test_ingest_writer_uses_resolver() -> None:
     text = (REPO_ROOT / "ingest" / "app" / "clients" / "qdrant.py").read_text(encoding="utf-8")
     assert "resolve_qdrant_collection" in text
+
+
+def test_quota_api_persists_qdrant_suffix() -> None:
+    from app.quota_store import InMemoryQuotaStore
+
+    store = InMemoryQuotaStore()
+    store.upsert_quotas("acme", {"qdrant_collection_suffix": "acme"})
+    assert store.get_qdrant_collection_suffix("acme") == "acme"

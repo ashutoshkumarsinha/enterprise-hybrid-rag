@@ -1,5 +1,5 @@
 {
-  "run_at": "2026-07-11T04:59:11.579409+00:00",
+  "run_at": "2026-07-11T07:26:36.868579+00:00",
   "mode": "mock",
   "tenant_id": "bench-tenant",
   "collection_id": "bench-collection",
@@ -10,7 +10,7 @@
   "written": 0,
   "documents_recorded": 1,
   "batches": 4,
-  "elapsed_s": 0.0038,
-  "chunks_per_min": 1021050.37,
-  "chunks_per_sec": 17017.5062
+  "elapsed_s": 0.0001,
+  "chunks_per_min": 40385805.35,
+  "chunks_per_sec": 673096.7558
 }

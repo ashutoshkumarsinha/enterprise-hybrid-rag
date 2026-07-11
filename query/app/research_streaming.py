@@ -47,6 +47,7 @@ def state_from_request(
         tenant_id=tenant_id,
         collection_id=body.get("collection_id", ""),
         additional_collection_ids=list(body.get("additional_collection_ids") or []),
+        scope_strategy=body.get("scope_strategy") or "",
         document_id=body.get("document_id"),
         version_id=body.get("version_id"),
         explicit_scope=explicit,

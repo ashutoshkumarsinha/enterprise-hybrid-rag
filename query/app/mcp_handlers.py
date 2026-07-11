@@ -66,6 +66,7 @@ async def handle_research_documents(
             tenant_id=tenant_id,
             collection_id=args.get("collection_id") or "",
             additional_collection_ids=list(args.get("additional_collection_ids") or []),
+            scope_strategy=args.get("scope_strategy") or "",
             document_id=args.get("document_id"),
             version_id=args.get("version_id"),
             explicit_scope=explicit,

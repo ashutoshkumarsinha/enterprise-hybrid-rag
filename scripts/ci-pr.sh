@@ -1,35 +1,10 @@
 #!/usr/bin/env bash
-# PR CI — unit + contract for query and ingest (no GPU, no live stack).
+# PR CI — rag-v1.0 gate (P1+P2+P3 + config alignment + unit/contract).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-echo "==> query unit + contract"
-(
-  cd query
-  PY="${ROOT}/query/.venv/bin/python"
-  if [[ ! -x "$PY" ]]; then PY=python3; fi
-  "$PY" -m pytest tests/unit tests/contract -q --tb=short
-)
+chmod +x scripts/validate_rag_v1.sh scripts/validate_config_alignment.py 2>/dev/null || true
+./scripts/validate_rag_v1.sh
 
-echo "==> ingest unit + contract"
-(
-  cd ingest
-  PY="${ROOT}/ingest/.venv/bin/python"
-  if [[ ! -x "$PY" ]]; then PY=python3; fi
-  "$PY" -m pytest tests/unit tests/contract -q --tb=short
-)
-
-echo "==> P1 gate (E-14..E-19)"
-chmod +x scripts/validate_p1.sh 2>/dev/null || true
-./scripts/validate_p1.sh
-
-echo "==> P2 gate (E-34, E-24, E-25 + manifest)"
-chmod +x scripts/validate_p2.sh scripts/migrate_embed_dimension.py 2>/dev/null || true
-./scripts/validate_p2.sh
-
-echo "==> P3 gate (E-30..E-33)"
-chmod +x scripts/validate_p3.sh 2>/dev/null || true
-./scripts/validate_p3.sh
-
-echo "PR unit+contract OK"
+echo "PR CI OK"

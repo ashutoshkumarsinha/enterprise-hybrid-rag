@@ -322,6 +322,10 @@ validate-p3: ## P3 gate — E-30..E-33 advanced product deliverables
 	@chmod +x scripts/validate_p3.sh 2>/dev/null || true
 	@./scripts/validate_p3.sh
 
+validate-rag-v1: ## rag-v1.0 release gate — P1+P2+P3 + full contract suite
+	@chmod +x scripts/validate_rag_v1.sh scripts/validate_config_alignment.py 2>/dev/null || true
+	@./scripts/validate_rag_v1.sh
+
 validate-embed-dimension: ## E-25 embed_dimension consistency check
 	@PY=$$( [ -x $(INGEST_DIR)/.venv/bin/python ] && echo $(INGEST_DIR)/.venv/bin/python || echo python3 ); \
 	chmod +x scripts/migrate_embed_dimension.py 2>/dev/null || true; \

@@ -1,8 +1,8 @@
 # Specification Roadmap — Enterprise Hybrid RAG
 
 **Parent:** [ENTERPRISE_HYBRID_RAG_SPEC.md](../ENTERPRISE_HYBRID_RAG_SPEC.md)  
-**Current platform spec:** v0.28  
-**Last updated:** 2026-07-10
+**Current platform spec:** v0.28 → **rag-v1.0 target**  
+**Last updated:** 2026-07-11
 
 This document is the **living plan** for spec depth, implementation phases, and cross-sub-project alignment. Normative behavior remains in the platform spec and sub-project `SPEC.md` files.
 
@@ -26,7 +26,7 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | **Contract tests** | **51+ query + ingest contract tests** | `query/tests/contract/`, `ingest/tests/contract/` |
 | **GitHub Actions CI** | **Implemented** | `.github/workflows/ci.yml`, `nightly.yml`, `scripts/ci-*.sh` |
 | **Integration tests** | **Implemented** | `query/tests/integration/` (`LIVE_STACK=1`, `.env.live.example`) |
-| **SigNoz APM profile** | **Partial on disk** | §10.5, `observability/docs/SIGNOZ.md` |
+| **SigNoz APM profile** | **Done** — dashboards, alerts, FR-40 metrics query+ingest | §10.5, `observability/docs/SIGNOZ.md` |
 | **Postgres query roles** | **Init script + grants** | `postgres-init.sh`, `004_*`, `infra/docs/POSTGRES.md` |
 | **Root `.gitignore`** | **Done** | secrets, local configs, token files |
 | LangGraph RAG orchestration + LangSmith | **Done** — full pipeline + OTel span catalog (E-06) | `query/app/rag_graph.py`, `telemetry.py` |
@@ -133,6 +133,20 @@ This document is the **living plan** for spec depth, implementation phases, and 
 
 **P3 gate:** `make validate-p3` · manifest: `docs/releases/p3_manifest.json`
 
+### Post-P3 — rag-v1.0 release train
+
+| Item | Status | Notes |
+|------|--------|-------|
+| OQ1 managed stores | **Done** — `docs/MANAGED_STORES.md` |
+| OQ4 external IdP | **Done** — `infra/docs/KEYCLOAK.md` §9 |
+| INF-P6 read replicas | **Done** — `infra/docs/SCALE_OUT.md` |
+| Google Drive connector | **Done** — `connectors/google_drive.py` |
+| E-33 quota suffix API | **Done** — `quota_store` + migration 005 |
+| E-30 multi_top_k | **Done** — `scope_strategy` + parallel retrieve |
+| rag-v1.0 gate | **Done** — `make validate-rag-v1`, `docs/releases/rag_v1_gate.json` |
+
+**Release gate:** `make validate-rag-v1` · optional: `LIVE_STACK=1`, `RAGAS_GATE=1`, `LOAD_GATE=1`
+
 ---
 
 ## 3. Spec document map (where to add detail)
@@ -161,23 +175,23 @@ flowchart TB
 
 Before tagging `rag-v1.x`, verify:
 
-- [ ] `index_schema_version` matches across infra, ingest, query configs
-- [ ] `embed_dimension` matches inference embed model output
-- [ ] IF-1 init-db completed (`make init-db`)
-- [ ] Catalog migrations applied (`cd ingest && make migrate`)
+- [x] `index_schema_version` matches across infra, ingest, query configs (`validate_config_alignment.py`)
+- [x] `embed_dimension` matches inference embed model output (`make validate-embed-dimension`)
+- [ ] IF-1 init-db completed (`make init-db`) — live stack
+- [ ] Catalog migrations applied (`cd ingest && make migrate`) — live stack
 - [ ] IF-4 inference health passes for required models
 - [ ] IF-5 OTLP + Langfuse keys configured (query)
 - [ ] IF-6 Keycloak realm imported; MCP admin token minted (`POST /admin/mcp/tokens`)
-- [ ] Unit + contract tests pass on every PR (`pytest tests/unit tests/contract`) — TL-11
+- [x] Unit + contract tests pass on every PR (`make validate-rag-v1`) — TL-11
 - [ ] Audience guides and sub-project READMEs current for shipped behavior — FR-35, NFR-25
-- [ ] MCP contract tests pass (`research_documents`, session tools, `/research/stream`)
-- [ ] Golden-set p95 within baseline × 1.1 (spec §18.7)
-- [ ] Ragas gates pass on golden set (`benchmark_rag.py --ragas`)
-- [ ] k6 or Locust soak passes NFR-23 (`load_test.py`)
+- [x] MCP contract tests pass (`research_documents`, session tools, `/research/stream`)
+- [ ] Golden-set p95 within baseline × 1.1 (spec §18.7) — `RAGAS_GATE=1`
+- [ ] Ragas gates pass on golden set (`benchmark_rag.py --ragas`) — `RAGAS_GATE=1`
+- [ ] k6 or Locust soak passes NFR-23 (`load_test.py`) — `LOAD_GATE=1`
 - [ ] Rate limits + quotas configured for prod tenants
 - [x] Circuit breakers enabled on query inference clients (E-28)
 - [x] OTel SDK overhead < 5% p95 vs disabled (`OBS-P3`, `--compare-otel`)
-- [ ] Infra store SLOs pass (`make health` in infra)
+- [ ] Infra store SLOs pass (`make health` in infra) — live stack
 
 ---
 
@@ -217,10 +231,10 @@ See also platform spec **§22** (what to spec next).
 
 | ID | Question | Target resolution |
 |----|----------|-------------------|
-| OQ1 | Managed vs self-hosted stores | v0.13 — deployment appendix |
-| OQ2 | Embed model swap without full reindex | v0.13 — migration playbook |
-| OQ3 | Federated multi-region MCP | v1.1+ |
-| OQ4 | Keycloak vs external IdP (Azure AD) | Document federation in `infra/docs/KEYCLOAK.md` |
+| OQ1 | Managed vs self-hosted stores | **Done** — `docs/MANAGED_STORES.md` |
+| OQ2 | Embed model swap without full reindex | **Done** — E-25 migration playbook |
+| OQ3 | Federated multi-region MCP | **Done v1** — E-32 catalog federation; research federation v1.1+ |
+| OQ4 | Keycloak vs external IdP (Azure AD) | **Done** — `infra/docs/KEYCLOAK.md` §9 |
 | OQ5 | MCP auth: token vs JWT | **Closed v0.26** — token-first; JWT bridge optional |
 
 ---

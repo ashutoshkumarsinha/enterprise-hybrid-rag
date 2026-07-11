@@ -29,6 +29,8 @@ def test_qdrant_client_supports_match_any_scope() -> None:
     assert "additional_collection_ids" in text
     assert "MatchAny" in text
     assert "_scope_collection_ids" in text
+    assert "multi_top_k" in text
+    assert "_retrieve_multi_top_k" in text
 
 
 def test_rag_state_includes_additional_collection_ids() -> None:

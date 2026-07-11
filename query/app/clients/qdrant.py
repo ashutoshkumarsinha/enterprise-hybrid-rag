@@ -216,6 +216,24 @@ def retrieve_for_state(
         query = state.get("query", "")
         dense = embed_client.embed(query)
         sparse = embed_client.sparse_from_text(query)
+
+    scope_ids = _scope_collection_ids(
+        state.get("collection_id") or None,
+        state.get("additional_collection_ids"),
+    )
+    strategy = (state.get("scope_strategy") or "").lower()
+    if strategy == "multi_top_k" and len(scope_ids) > 1:
+        return _retrieve_multi_top_k(
+            qdrant,
+            tenant_id=state.get("tenant_id", ""),
+            dense_vector=dense,
+            sparse_indices=sparse["indices"],
+            sparse_values=sparse["values"],
+            collection_ids=scope_ids,
+            document_id=state.get("document_id"),
+            version_id=state.get("version_id"),
+        )
+
     return qdrant.hybrid_search(
         tenant_id=state.get("tenant_id", ""),
         dense_vector=dense,
@@ -226,3 +244,45 @@ def retrieve_for_state(
         document_id=state.get("document_id"),
         version_id=state.get("version_id"),
     )
+
+
+def _retrieve_multi_top_k(
+    qdrant: QdrantClient,
+    *,
+    tenant_id: str,
+    dense_vector: list[float],
+    sparse_indices: list[int],
+    sparse_values: list[float],
+    collection_ids: list[str],
+    document_id: str | None,
+    version_id: str | None,
+) -> list[dict[str, Any]]:
+    """Parallel per-collection retrieve — spec §6.3 multi_scope_parallelism."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    parallelism = int(os.environ.get("MULTI_SCOPE_PARALLELISM", "4"))
+    merged: dict[str, dict[str, Any]] = {}
+
+    def _search_one(coll_id: str) -> list[dict[str, Any]]:
+        return qdrant.hybrid_search(
+            tenant_id=tenant_id,
+            dense_vector=dense_vector,
+            sparse_indices=sparse_indices,
+            sparse_values=sparse_values,
+            collection_id=coll_id,
+            document_id=document_id,
+            version_id=version_id,
+        )
+
+    with ThreadPoolExecutor(max_workers=min(parallelism, len(collection_ids))) as pool:
+        futures = {pool.submit(_search_one, cid): cid for cid in collection_ids}
+        for future in as_completed(futures):
+            for chunk in future.result():
+                merged[str(chunk.get("uuid", id(chunk)))] = chunk
+
+    ranked = sorted(
+        merged.values(),
+        key=lambda c: float(c.get("score") or 0.0),
+        reverse=True,
+    )
+    return ranked[: qdrant.recall_limit]

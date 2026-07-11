@@ -27,7 +27,15 @@ def resolve_qdrant_collection(
 
 
 def tenant_suffix(tenant_id: str) -> str | None:
-    """Lookup suffix from env map (dev) or return None for standard tier."""
+    """Lookup suffix from catalog quotas, then env map."""
+    try:
+        from app.quota_store import get_quota_store
+
+        suffix = get_quota_store().get_qdrant_collection_suffix(tenant_id)
+        if suffix:
+            return suffix
+    except Exception:
+        pass
     raw = os.environ.get("QDRANT_TENANT_SUFFIX_JSON", "")
     if not raw:
         return None

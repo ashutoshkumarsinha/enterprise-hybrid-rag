@@ -50,8 +50,8 @@ Qdrant filter uses `MatchAny` on `collection_id` when multiple corpora are in sc
 
 ## 4. Performance
 
-- Single hybrid search with one `MatchAny` filter (not N round-trips) for v1 E-30
-- Future `scope_strategy=multi_top_k` (spec §6.3) may parallelize per-collection retrieve — deferred beyond E-30
+- Single hybrid search with one `MatchAny` filter (default)
+- `scope_strategy=multi_top_k` — parallel per-collection retrieve + score merge (`MULTI_SCOPE_PARALLELISM`, default 4)
 
 ---
 

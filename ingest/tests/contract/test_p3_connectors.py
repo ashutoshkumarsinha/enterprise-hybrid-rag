@@ -11,6 +11,7 @@ CONNECTORS = REPO_ROOT / "ingest" / "app" / "connectors"
 def test_sharepoint_and_confluence_modules_exist() -> None:
     assert (CONNECTORS / "sharepoint.py").is_file()
     assert (CONNECTORS / "confluence.py").is_file()
+    assert (CONNECTORS / "google_drive.py").is_file()
 
 
 def test_connectors_registered_in_factory() -> None:

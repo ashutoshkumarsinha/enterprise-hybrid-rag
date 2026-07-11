@@ -24,9 +24,10 @@ class QuotaLimits:
     max_concurrent_streams: int
     max_storage_bytes: int
     max_embed_tokens_day: int
+    qdrant_collection_suffix: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        out = {
             "tenant_id": self.tenant_id,
             "max_chunks": self.max_chunks,
             "max_collections": self.max_collections,
@@ -35,6 +36,9 @@ class QuotaLimits:
             "max_storage_bytes": self.max_storage_bytes,
             "max_embed_tokens_day": self.max_embed_tokens_day,
         }
+        if self.qdrant_collection_suffix:
+            out["qdrant_collection_suffix"] = self.qdrant_collection_suffix
+        return out
 
 
 def quota_enforcement_enabled() -> bool:
@@ -58,9 +62,13 @@ class QuotaStore(ABC):
     def count_collections(self, tenant_id: str) -> int:
         raise NotImplementedError
 
+    def get_qdrant_collection_suffix(self, tenant_id: str) -> str | None:
+        return self.get_quotas(tenant_id).qdrant_collection_suffix
+
 
 def _limits_from_row(tenant_id: str, row: dict[str, Any] | None) -> QuotaLimits:
     data = row or {}
+    suffix = data.get("qdrant_collection_suffix")
     return QuotaLimits(
         tenant_id=tenant_id,
         max_chunks=int(data.get("max_chunks", _DEFAULT_MAX_CHUNKS)),
@@ -69,6 +77,7 @@ def _limits_from_row(tenant_id: str, row: dict[str, Any] | None) -> QuotaLimits:
         max_concurrent_streams=int(data.get("max_concurrent_streams", 50)),
         max_storage_bytes=int(data.get("max_storage_bytes", 536_870_912_000)),
         max_embed_tokens_day=int(data.get("max_embed_tokens_day", 10_000_000)),
+        qdrant_collection_suffix=str(suffix).strip() if suffix else None,
     )
 
 
@@ -136,7 +145,8 @@ class PostgresQuotaStore(QuotaStore):
                 cur.execute(
                     """
                     SELECT max_chunks, max_collections, query_qps,
-                           max_concurrent_streams, max_storage_bytes, max_embed_tokens_day
+                           max_concurrent_streams, max_storage_bytes, max_embed_tokens_day,
+                           qdrant_collection_suffix
                     FROM tenant_quotas
                     WHERE tenant_id = %s
                     """,
@@ -154,6 +164,7 @@ class PostgresQuotaStore(QuotaStore):
                 "max_concurrent_streams": row[3],
                 "max_storage_bytes": row[4],
                 "max_embed_tokens_day": row[5],
+                "qdrant_collection_suffix": row[6],
             },
         )
 
@@ -168,9 +179,10 @@ class PostgresQuotaStore(QuotaStore):
                     """
                     INSERT INTO tenant_quotas (
                         tenant_id, max_chunks, max_collections, query_qps,
-                        max_concurrent_streams, max_storage_bytes, max_embed_tokens_day
+                        max_concurrent_streams, max_storage_bytes, max_embed_tokens_day,
+                        qdrant_collection_suffix
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (tenant_id) DO UPDATE SET
                         max_chunks = EXCLUDED.max_chunks,
                         max_collections = EXCLUDED.max_collections,
@@ -178,6 +190,7 @@ class PostgresQuotaStore(QuotaStore):
                         max_concurrent_streams = EXCLUDED.max_concurrent_streams,
                         max_storage_bytes = EXCLUDED.max_storage_bytes,
                         max_embed_tokens_day = EXCLUDED.max_embed_tokens_day,
+                        qdrant_collection_suffix = EXCLUDED.qdrant_collection_suffix,
                         updated_at = now()
                     """,
                     (
@@ -188,6 +201,7 @@ class PostgresQuotaStore(QuotaStore):
                         int(payload["max_concurrent_streams"]),
                         int(payload["max_storage_bytes"]),
                         int(payload["max_embed_tokens_day"]),
+                        payload.get("qdrant_collection_suffix"),
                     ),
                 )
             conn.commit()
