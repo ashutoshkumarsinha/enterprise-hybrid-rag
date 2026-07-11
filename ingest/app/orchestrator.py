@@ -15,12 +15,13 @@ from app.acl_handlers import (
     patch_collection_default_acl,
 )
 from app.acl_store import get_acl_store
+from app.connector_handlers import enqueue_collection_sync
 from app.parsers.base import ParseContext
 from app.pipeline import parse_document
 from app.tasks import batch_write
 from app.telemetry import get_tracer, setup_otel
 
-app = FastAPI(title="hybrid-rag-ingest-orchestrator", version="0.4.0-acl-admin")
+app = FastAPI(title="hybrid-rag-ingest-orchestrator", version="0.5.0-connectors")
 setup_otel(app)
 tracer = get_tracer()
 
@@ -49,9 +50,15 @@ def healthz() -> dict:
 
 
 @app.post("/admin/ingest/collection")
-def ingest_collection() -> dict:
+async def ingest_collection(request: Request) -> dict:
     with tracer.start_as_current_span("ingest.job.enqueue_collection"):
-        return {"status": "accepted", "stub": True, "message": "collection ingest not yet implemented"}
+        return await enqueue_collection_sync(request)
+
+
+@app.post("/admin/connectors/sync")
+async def connectors_sync(request: Request) -> dict:
+    with tracer.start_as_current_span("ingest.connector.enqueue"):
+        return await enqueue_collection_sync(request)
 
 
 @app.post("/admin/ingest/document")

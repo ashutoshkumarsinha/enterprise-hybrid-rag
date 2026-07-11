@@ -157,7 +157,7 @@ flowchart LR
 | Sub-project | Docs | Compose / ops | Application code | Tests / schemas |
 |-------------|------|---------------|------------------|-----------------|
 | **query** | **Complete** — `SPEC.md`, 9× `docs/` (incl. RBAC, SESSIONS, TOKEN_ADMIN, MCP stdio) | `compose/`, `Makefile`, `Dockerfile` | **rag-v1.0 candidate** — full LangGraph path + supervisor + breakers | **62 contract/unit tests** |
-| **ingest** | **Complete** — `SPEC.md`, 7× `docs/` (incl. MIGRATIONS) | `compose/`, worker `Dockerfile` | **Partial v0.33** — parser router + embed/Qdrant/Neo4j write path | **14 contract/unit tests**; migrations 001–004 |
+| **ingest** | **Complete** — `SPEC.md`, 7× `docs/` (incl. MIGRATIONS) | `compose/`, worker `Dockerfile` | **Partial v0.35** — parsers + write + ACL + S3 connector sync | **29 contract/unit tests**; migrations 001–004 |
 | **infra** | **Complete** — `SPEC.md`, 9× `docs/` | Full store compose; Qdrant gRPC **6334** | **Partial** — `init-db.sh`, `init-minio.sh`, `postgres-init.sh` (4 catalog roles), `healthcheck.sh`, `backup.sh`, `render_caddyfile.py`, `hybrid-rag-realm.json` | No `postgres-catalog-indexes.sql` (INF-P2) |
 | **inference** | **Complete** — `SPEC.md`, 7× `docs/` | vLLM `v0.6.6` compose profiles | **Partial** — `reranker/sidecar.py` working minimal `/predict`; vLLM upstream images | Smoke scripts only |
 | **observability** | **Complete** — `SPEC.md`, 6× `docs/` + **§10.5 SigNoz** | Dev collector + Jaeger + Langfuse compose; `PROFILE=signoz` sidecar | **Partial** — SigNoz dashboard stubs, `otel-collector-config.signoz.yaml`, `signoz-rules.yaml` | No `otel-collector-config.prod.yaml` (OBS-P1) |
@@ -184,6 +184,7 @@ flowchart LR
 | `ingest/app/orchestrator.py` | Partial v0.32 | `POST /admin/ingest/document` wired; collection/jobs stub |
 | `ingest/app/writers.py`, `clients/embed.py`, `clients/qdrant.py`, `clients/neo4j.py` | Implemented v0.33 | Batch embed + Qdrant upsert + Neo4j merge (stub tier) |
 | `ingest/app/acl_store.py`, `acl_handlers.py` | Implemented v0.34 | ACL grant CRUD + collection `default_acl` admin |
+| `ingest/app/connectors/`, `connector_sync.py` | Implemented v0.35 | S3/MinIO + filesystem connector sync |
 
 #### Not yet on disk (normative refs exist)
 

@@ -7,7 +7,8 @@
 
 | Route | Method | Purpose |
 |-------|--------|---------|
-| `/admin/ingest/collection` | POST | Full or incremental collection job |
+| `/admin/ingest/collection` | POST | Enqueue connector sync (S3/filesystem) |
+| `/admin/connectors/sync` | POST | Alias for collection connector sync |
 | `/admin/ingest/document` | POST | Single document ingest |
 | `/admin/ingest/jobs/{id}` | GET | Job status |
 | `/admin/acl/grants` | POST | Create principal grant (collection or document scope) |
