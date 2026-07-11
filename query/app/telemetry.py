@@ -9,6 +9,38 @@ if TYPE_CHECKING:
     from fastapi import FastAPI
 
 _CONFIGURED = False
+_BENCHMARK_EXPORTER: object | None = None
+
+
+def reset_otel() -> None:
+    """Reset OTel SDK state (for benchmark A/B runs)."""
+    global _CONFIGURED, _BENCHMARK_EXPORTER
+    _CONFIGURED = False
+    _BENCHMARK_EXPORTER = None
+    from opentelemetry import trace
+    from opentelemetry.trace import NoOpTracerProvider
+
+    trace.set_tracer_provider(NoOpTracerProvider())
+
+
+def is_otel_configured() -> bool:
+    return _CONFIGURED
+
+
+def setup_otel_benchmark() -> None:
+    """Configure in-process OTel with in-memory export (OBS-P3 overhead probe)."""
+    global _CONFIGURED, _BENCHMARK_EXPORTER
+    reset_otel()
+    from opentelemetry import trace
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+    _BENCHMARK_EXPORTER = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(_BENCHMARK_EXPORTER))
+    trace.set_tracer_provider(provider)
+    _CONFIGURED = True
 
 
 def setup_otel(app: FastAPI | None = None) -> None:

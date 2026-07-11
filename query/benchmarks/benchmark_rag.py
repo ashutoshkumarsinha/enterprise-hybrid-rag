@@ -170,6 +170,74 @@ def _require_live_stack() -> None:
         raise SystemExit("live-stack requested but Qdrant is in stub mode (set QDRANT_URL)")
 
 
+def _otel_overhead_ratio(*, baseline_p95: int, otel_p95: int) -> float:
+    if baseline_p95 <= 0:
+        return 0.0 if otel_p95 <= 0 else float("inf")
+    return otel_p95 / baseline_p95
+
+
+def _check_otel_overhead(
+    *,
+    baseline_p95: int,
+    otel_p95: int,
+    max_ratio: float,
+) -> tuple[list[str], list[str]]:
+    warnings: list[str] = []
+    failures: list[str] = []
+    ratio = _otel_overhead_ratio(baseline_p95=baseline_p95, otel_p95=otel_p95)
+    if ratio > max_ratio:
+        failures.append(
+            f"otel overhead ratio {ratio:.3f} > {max_ratio} "
+            f"(baseline p95={baseline_p95}ms, otel p95={otel_p95}ms)"
+        )
+    return warnings, failures
+
+
+async def _run_benchmark_otel(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Run benchmark rows wrapped in OTel spans (enabled SDK path)."""
+    from app.telemetry import get_tracer, setup_otel_benchmark
+
+    setup_otel_benchmark()
+    tracer = get_tracer("benchmark-rag")
+    results: list[dict[str, Any]] = []
+    for row in rows:
+        with tracer.start_as_current_span("benchmark.rag_row") as span:
+            span.set_attribute("benchmark.row_id", row.get("id") or "")
+            results.append(await _run_row(row))
+    return results
+
+
+async def _compare_otel_runs(
+    rows: list[dict[str, Any]],
+    *,
+    max_ratio: float,
+) -> dict[str, Any]:
+    from app.telemetry import reset_otel
+
+    reset_clients()
+    reset_otel()
+    os.environ["OTEL_SDK_DISABLED"] = "true"
+    baseline_results = await _run_benchmark(rows)
+    baseline_stages = _stage_stats(baseline_results)
+    baseline_p95 = baseline_stages.get("total", {}).get("p95", 0)
+
+    reset_clients()
+    os.environ.pop("OTEL_SDK_DISABLED", None)
+    otel_results = await _run_benchmark_otel(rows)
+    otel_stages = _stage_stats(otel_results)
+    otel_p95 = otel_stages.get("total", {}).get("p95", 0)
+
+    ratio = _otel_overhead_ratio(baseline_p95=baseline_p95, otel_p95=otel_p95)
+    return {
+        "baseline_p95_ms": baseline_p95,
+        "otel_p95_ms": otel_p95,
+        "overhead_ratio": round(ratio, 4),
+        "max_ratio": max_ratio,
+        "passed": ratio <= max_ratio,
+        "count": len(rows),
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="RAG golden-set benchmark")
     parser.add_argument("--golden-set", type=Path, default=BENCHMARKS_DIR / "golden_set.json")
@@ -186,7 +254,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--warn-context-recall", type=float, default=None)
     parser.add_argument("--fail-total-p95-ms", type=int, default=None)
     parser.add_argument("--warn-total-p95-ms", type=int, default=None)
-    parser.add_argument("--compare-otel", action="store_true", help="OBS-P3 placeholder")
+    parser.add_argument("--compare-otel", action="store_true", help="OBS-P3: A/B OTel SDK overhead gate")
+    parser.add_argument(
+        "--fail-otel-overhead-ratio",
+        type=float,
+        default=1.05,
+        help="Fail when otel p95 / baseline p95 exceeds this ratio (default 1.05)",
+    )
+    parser.add_argument("--otel-output", type=Path, default=BENCHMARKS_DIR / "last_otel_compare.json")
     parser.add_argument("--live-stack", action="store_true")
     args = parser.parse_args(argv)
 
@@ -237,10 +312,21 @@ def main(argv: list[str] | None = None) -> int:
     if ragas_out:
         args.ragas_output.write_text(json.dumps(ragas_out, indent=2) + "\n", encoding="utf-8")
 
+    otel_compare: dict[str, Any] | None = None
     if args.compare_otel:
-        print("WARN: --compare-otel not implemented (OBS-P3)", file=sys.stderr)
+        otel_compare = asyncio.run(_compare_otel_runs(rows, max_ratio=args.fail_otel_overhead_ratio))
+        otel_compare["run_at"] = datetime.now(UTC).isoformat()
+        args.otel_output.write_text(json.dumps(otel_compare, indent=2) + "\n", encoding="utf-8")
+        print(json.dumps(otel_compare, indent=2))
 
     warnings, failures = _check_thresholds(stages=stages, ragas=ragas_out, args=args)
+    if otel_compare and not otel_compare.get("passed", True):
+        _, otel_failures = _check_otel_overhead(
+            baseline_p95=int(otel_compare.get("baseline_p95_ms", 0)),
+            otel_p95=int(otel_compare.get("otel_p95_ms", 0)),
+            max_ratio=float(otel_compare.get("max_ratio", args.fail_otel_overhead_ratio)),
+        )
+        failures.extend(otel_failures)
     for msg in warnings:
         print(f"WARN: {msg}", file=sys.stderr)
     for msg in failures:

@@ -98,7 +98,7 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | INF-P4 | Qdrant gRPC 6334 documented in compose | infra | port mapping + consumer docs |
 | OBS-P1 | Probabilistic trace sampler | observability | `collector/otel-collector-config.prod.yaml` |
 | OBS-P2 | Query attribute truncation processor | observability | collector config |
-| OBS-P3 | `benchmark_rag.py --compare-otel` | query | CI gate < 5% overhead |
+| OBS-P3 | `benchmark_rag.py --compare-otel` | query | **Done v0.47** — CI gate < 5% p95 overhead |
 | OBS-P4 | Jaeger persistent storage profile | observability | compose profile `jaeger-persist` |
 
 ### P2 — Enterprise hardening
@@ -115,7 +115,7 @@ This document is the **living plan** for spec depth, implementation phases, and 
 | E-26 | Chaos test suite automation | spec §13.1 monthly staging |
 | E-27 | Tenant quota admin API | `PUT /admin/tenants/{id}/quotas` |
 | E-28 | Circuit breaker implementation | query `client_factory.py` | **Done v0.31** |
-| E-29 | Load test harness (`load_test.py`) | k6/locust wrapper |
+| E-29 | Load test harness (`load_test.py`) | k6/locust wrapper | **Done v0.48** |
 
 ### P3 — Advanced product
 
@@ -169,7 +169,7 @@ Before tagging `rag-v1.x`, verify:
 - [ ] k6 or Locust soak passes NFR-23 (`load_test.py`)
 - [ ] Rate limits + quotas configured for prod tenants
 - [x] Circuit breakers enabled on query inference clients (E-28)
-- [ ] OTel SDK overhead < 5% p95 vs disabled (`OBS-P3`)
+- [x] OTel SDK overhead < 5% p95 vs disabled (`OBS-P3`, `--compare-otel`)
 - [ ] Infra store SLOs pass (`make health` in infra)
 
 ---

@@ -70,6 +70,13 @@ python benchmarks/benchmark_rag.py --limit 20 --write-baseline
 python benchmarks/compare_benchmark_run.py benchmarks/last_run.json benchmarks/baselines.json
 ```
 
+### OTel overhead (OBS-P3)
+
+```bash
+python benchmarks/benchmark_rag.py --limit 4 --compare-otel --fail-otel-overhead-ratio 1.05
+# writes benchmarks/last_otel_compare.json
+```
+
 ---
 
 ## 5. Load / soak (k6 — primary)

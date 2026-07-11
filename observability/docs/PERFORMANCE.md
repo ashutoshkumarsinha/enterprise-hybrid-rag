@@ -148,7 +148,7 @@ Do **not** point application `OTEL_EXPORTER_OTLP_ENDPOINT` at SigNoz directly.
 | Collector ingest | < 10ms | Collector self-metrics |
 | Jaeger write | non-blocking | batch exporter queue depth |
 
-**CI gate (planned):** `benchmark_rag.py --compare-otel` — total p95 regression < 5% with OTel enabled.
+**CI gate (OBS-P3):** `benchmark_rag.py --compare-otel` — total p95 regression must stay below 5% with OTel SDK enabled (in-memory exporter benchmark path).
 
 ---
 
@@ -186,7 +186,7 @@ synthetic_trace_on_health = false
 |----|--------------|--------|
 | OBS-P1 | `probabilistic_sampler` processor + prod config profile | planned |
 | OBS-P2 | `attributes/redact` for query string truncation in collector | planned |
-| OBS-P3 | `benchmark_rag.py --compare-otel` CI gate | planned |
+| OBS-P3 | `benchmark_rag.py --compare-otel` CI gate | **done** |
 | OBS-P4 | Jaeger persistent storage compose profile | planned |
 | OBS-P5 | Prometheus alert rules for `rag_ttft_ms` p95 | planned |
 | OBS-P6 | Tail sampling for error traces (100% errors, 10% success) | future |

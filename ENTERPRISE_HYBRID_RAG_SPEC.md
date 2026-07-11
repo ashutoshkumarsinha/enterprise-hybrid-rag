@@ -156,7 +156,7 @@ flowchart LR
 
 | Sub-project | Docs | Compose / ops | Application code | Tests / schemas |
 |-------------|------|---------------|------------------|-----------------|
-| **query** | **Complete** — `SPEC.md`, 9× `docs/` (incl. RBAC, SESSIONS, TOKEN_ADMIN, MCP stdio) | `compose/`, `Makefile`, `Dockerfile` | **rag-v1.0 candidate** — full LangGraph path + supervisor + breakers + events + ACL cache | **71 contract/unit tests** |
+| **query** | **Complete** — `SPEC.md`, 9× `docs/` (incl. RBAC, SESSIONS, TOKEN_ADMIN, MCP stdio) | `compose/`, `Makefile`, `Dockerfile` | **rag-v1.0 candidate** — full LangGraph path + supervisor + breakers + events + ACL cache | **80 contract/unit tests** |
 | **ingest** | **Complete** — `SPEC.md`, 7× `docs/` (incl. MIGRATIONS) | `compose/`, worker `Dockerfile` | **v0.46** — ingest plane + backpressure | **53 contract/unit tests**; migrations 001–004 |
 | **infra** | **Complete** — `SPEC.md`, 9× `docs/` | Full store compose; Qdrant gRPC **6334** | **Partial** — `init-db.sh`, `init-minio.sh`, `postgres-init.sh` (4 catalog roles), `healthcheck.sh`, `backup.sh`, `render_caddyfile.py`, `hybrid-rag-realm.json` | No `postgres-catalog-indexes.sql` (INF-P2) |
 | **inference** | **Complete** — `SPEC.md`, 7× `docs/` | vLLM `v0.6.6` compose profiles | **Partial** — `reranker/sidecar.py` working minimal `/predict`; vLLM upstream images | Smoke scripts only |
@@ -178,7 +178,8 @@ flowchart LR
 | `query/app/mcp_stdio.py` | Implemented | stdio MCP transport (`python -m app.mcp_stdio`) |
 | `query/app/jwt_auth.py` | Implemented | JWKS validation + `JWT_STUB` dev mode |
 | `query/app/auth.py`, `token_store.py`, `session_store.py` | Implemented | MCP tokens + JWT bridge + tenant binding |
-| `query/benchmarks/benchmark_rag.py` | Implemented v0.43 | §13.2.1 CLI + `--ragas` warn/fail gates |
+| `query/benchmarks/benchmark_rag.py` | Implemented v0.47 | §13.2.1 CLI + `--ragas` + `--compare-otel` (OBS-P3) |
+| `query/benchmarks/load_test.py` | Implemented v0.48 | http + k6 + Locust soak wrapper (§13.1, NFR-23) |
 | `.github/workflows/ci.yml`, `nightly.yml` | Implemented v0.43 | PR + nightly CI per §19.6 |
 | `ingest/app/migrate.py` | Implemented | Migration runner §4.4.4 |
 | `ingest/app/parsers/` | Implemented v0.32 | Router + text/md/html/json/csv/yaml/pdf/docx/docling (stub tier) |
@@ -200,7 +201,8 @@ flowchart LR
 | Catalog MCP tools (`list_indexed_documents`, etc.) | **Done v0.30** — `catalog_store.py`, ACL §9.4.2 |
 | `query/app/circuit_breaker.py` | Implemented | FR-28 breakers + §6.3.2 degrade ladder |
 | `query/app/client_factory.py` | Implemented | Guarded client calls + breaker registry |
-| `benchmark_ingest.py`, `load_test.py` | `load_test.py` §13.1 |
+| `load_test.py` | **Done v0.48** — http + k6 + Locust wrapper §13.1 |
+| `ingest/benchmarks/benchmark_ingest.py` | Implemented v0.44 | Mock + live throughput gates (§13.1) |
 | `chat-ui/`, `deploy/helm/` | E-18, E-19 |
 
 ### 1.5 Stub-phase conventions (pre–rag-v1.0)

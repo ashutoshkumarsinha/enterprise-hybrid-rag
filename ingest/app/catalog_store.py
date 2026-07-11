@@ -24,6 +24,10 @@ class CatalogStore(ABC):
     ) -> dict[str, Any]:
         raise NotImplementedError
 
+    @abstractmethod
+    def count_tenant_chunks(self, tenant_id: str) -> int:
+        raise NotImplementedError
+
 
 def _version_content_hash(chunks: list[dict[str, Any]]) -> str:
     parts = sorted(chunk.get("content_hash") or hashlib.sha256(chunk["text"].encode()).hexdigest() for chunk in chunks)
@@ -85,6 +89,13 @@ class InMemoryCatalogStore(CatalogStore):
             }
             recorded += 1
         return {"documents_recorded": recorded}
+
+    def count_tenant_chunks(self, tenant_id: str) -> int:
+        return sum(
+            int(version.get("chunk_count", 0))
+            for key, version in self._versions.items()
+            if key[0] == tenant_id
+        )
 
 
 class PostgresCatalogStore(CatalogStore):
