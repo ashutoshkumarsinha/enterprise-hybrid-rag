@@ -84,11 +84,13 @@ Config: `config/infra.toml` → `[neo4j]`.
 
 **Roles:** `ingest_rw` (write), `query_ro` (read-only) — provisioned at init.
 
-**Indexes (ingest migrations — planned):**
+**Indexes (ingest migrations + INF-P2):**
+
+Base indexes in `ingest/migrations/001_catalog_v1.sql`. Supplemental performance indexes in `infra/scripts/postgres-catalog-indexes.sql` — apply via `make -C infra init-catalog-indexes` after migrations.
 
 ```sql
-CREATE INDEX idx_documents_tenant_collection ON documents (tenant_id, collection_id);
 CREATE INDEX idx_acl_grants_principal ON acl_grants (tenant_id, principal);
+CREATE INDEX idx_documents_tenant_collection_doc ON documents (tenant_id, collection_id, document_id);
 ```
 
 **Connection guidance for consumers:**
@@ -161,7 +163,7 @@ See [CADDY.md](./CADDY.md).
 | ID | Optimization | Status |
 |----|--------------|--------|
 | INF-P1 | Qdrant INT8 quantization init script | planned |
-| INF-P2 | Postgres catalog index DDL in `init-db.sh` | planned |
+| INF-P2 | Postgres catalog index DDL in `init-db.sh` | **Done** — `scripts/postgres-catalog-indexes.sql` + `init-catalog-indexes` |
 | INF-P3 | Caddy SSE `flush_interval -1` in `Caddyfile.example` | planned |
 | INF-P4 | Redis `maxmemory` + LRU in compose for DB 0 | planned |
 | INF-P5 | Qdrant gRPC port 6334 exposed in compose docs | planned |

@@ -80,7 +80,7 @@ env: ## Copy .env.example → .env in each sub-project (skip if .env exists)
 # Per-plane delegation
 # ---------------------------------------------------------------------------
 
-.PHONY: infra-up infra-down infra-health infra-init-db infra-logs
+.PHONY: infra-up infra-down infra-health infra-init-db infra-init-catalog-indexes infra-logs
 infra-up: network ## Start infra stores + Keycloak
 	@$(MAKE) -C $(INFRA_DIR) up
 
@@ -92,6 +92,9 @@ infra-health: ## Health check infra
 
 infra-init-db: ## Init Qdrant collection + MinIO buckets
 	@$(MAKE) -C $(INFRA_DIR) init-db
+
+infra-init-catalog-indexes: ## Apply INF-P2 Postgres catalog indexes
+	@$(MAKE) -C $(INFRA_DIR) init-catalog-indexes
 
 infra-logs: ## Tail infra logs
 	@$(MAKE) -C $(INFRA_DIR) logs
@@ -169,6 +172,7 @@ bootstrap: env ## Bootstrap full dev stack (infra → inference → obs → inge
 	@$(MAKE) infra-up
 	@$(MAKE) infra-init-db
 	@$(MAKE) migrate-catalog || echo "WARN: migrate-catalog skipped (set CATALOG_DSN in ingest/.env)"
+	@$(MAKE) infra-init-catalog-indexes || echo "WARN: catalog indexes skipped (set CATALOG_DSN)"
 	@$(MAKE) infra-health
 	@echo "==> 2/6 inference (PROFILE=$(INFERENCE_PROFILE))"
 	@$(MAKE) inference-up

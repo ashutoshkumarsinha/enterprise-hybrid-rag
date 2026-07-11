@@ -5,7 +5,7 @@ REGISTRY ?=
 PUSH     ?= false
 PACKER_ARGS := -var "image_tag=$(IMAGE_TAG)" -var "registry=$(REGISTRY)" -var "push=$(PUSH)"
 
-.PHONY: network up down health init-db init-minio backup logs render-caddy packer-init packer-validate packer-build
+.PHONY: network up down health init-db init-minio init-catalog-indexes backup logs render-caddy packer-init packer-validate packer-build
 
 network:
 	docker network inspect hybrid-rag-net >/dev/null 2>&1 || docker network create hybrid-rag-net
@@ -31,6 +31,10 @@ init-db:
 init-minio:
 	@chmod +x scripts/init-minio.sh
 	@./scripts/init-minio.sh
+
+init-catalog-indexes:
+	@chmod +x scripts/apply-catalog-indexes.sh
+	@./scripts/apply-catalog-indexes.sh
 
 backup:
 	@chmod +x scripts/backup.sh
