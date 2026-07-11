@@ -37,7 +37,15 @@ Enable Celery beat profile:
 make up PROFILE=beat
 ```
 
-Beat enqueues connector jobs; workers fetch → parse → index.
+Configure targets via env (see `ingest/.env.example`):
+
+| Variable | Purpose |
+|----------|---------|
+| `CONNECTOR_BEAT_ENABLED` | `true` to register beat schedule |
+| `CONNECTOR_SYNC_INTERVAL_MINUTES` | Tick interval (default 60) |
+| `CONNECTOR_BEAT_TARGETS` | JSON array of `{tenant_id, collection_id, connector, mode, prefix}` |
+
+Beat task `ingest.scheduled_connector_sync` enqueues connector jobs; workers fetch → parse → index.
 
 ## Catalog fields (FR-12)
 

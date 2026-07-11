@@ -23,7 +23,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
 def test_get_job_status_after_collection_enqueue(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     mock_result = MagicMock()
     mock_result.id = "task-456"
-    monkeypatch.setattr("app.connector_handlers.connector_sync.delay", lambda payload: mock_result)
+    monkeypatch.setattr("app.tasks.connector_sync.delay", lambda payload: mock_result)
     created = client.post(
         "/admin/ingest/collection",
         json={

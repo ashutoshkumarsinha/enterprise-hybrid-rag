@@ -51,7 +51,7 @@ async def lifespan(app: FastAPI):
     await stop_event_subscriber()
 
 
-app = FastAPI(title="hybrid-rag-query", version="0.4.0-events", lifespan=lifespan)
+app = FastAPI(title="hybrid-rag-query", version="0.5.0-acl-cache", lifespan=lifespan)
 setup_otel(app)
 setup_langsmith()
 

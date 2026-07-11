@@ -14,7 +14,7 @@ from app.orchestrator import app
 def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     mock_result = MagicMock()
     mock_result.id = "task-123"
-    monkeypatch.setattr("app.connector_handlers.connector_sync.delay", lambda payload: mock_result)
+    monkeypatch.setattr("app.tasks.connector_sync.delay", lambda payload: mock_result)
     with TestClient(app) as test_client:
         yield test_client
 

@@ -14,6 +14,7 @@ from app.acl_handlers import (
     patch_collection_default_acl,
 )
 from app.acl_store import get_acl_store
+from app.catalog_store import get_catalog_store
 from app.connector_handlers import enqueue_collection_sync
 from app.job_handlers import get_job_status
 from app.job_store import get_job_store
@@ -22,7 +23,7 @@ from app.pipeline import parse_document
 from app.tasks import batch_write
 from app.telemetry import get_tracer, setup_otel
 
-app = FastAPI(title="hybrid-rag-ingest-orchestrator", version="0.6.0-jobs")
+app = FastAPI(title="hybrid-rag-ingest-orchestrator", version="0.8.0-catalog")
 setup_otel(app)
 tracer = get_tracer()
 
@@ -44,7 +45,11 @@ def healthz() -> dict:
                 "redis_broker_ok": True,
                 "qdrant_write_ok": os.environ.get("QDRANT_STUB", "true").lower() in ("true", "1", "yes"),
                 "neo4j_write_ok": os.environ.get("NEO4J_STUB", "true").lower() in ("true", "1", "yes"),
-                "catalog_ok": get_acl_store().healthcheck() and get_job_store().healthcheck(),
+                "catalog_ok": (
+                    get_acl_store().healthcheck()
+                    and get_job_store().healthcheck()
+                    and get_catalog_store().healthcheck()
+                ),
                 "inference_embed_ok": os.environ.get("EMBED_STUB", "true").lower() in ("true", "1", "yes"),
             },
         }

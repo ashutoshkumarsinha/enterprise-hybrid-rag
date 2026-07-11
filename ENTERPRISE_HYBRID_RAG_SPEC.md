@@ -156,8 +156,8 @@ flowchart LR
 
 | Sub-project | Docs | Compose / ops | Application code | Tests / schemas |
 |-------------|------|---------------|------------------|-----------------|
-| **query** | **Complete** — `SPEC.md`, 9× `docs/` (incl. RBAC, SESSIONS, TOKEN_ADMIN, MCP stdio) | `compose/`, `Makefile`, `Dockerfile` | **rag-v1.0 candidate** — full LangGraph path + supervisor + breakers + events | **67 contract/unit tests** |
-| **ingest** | **Complete** — `SPEC.md`, 7× `docs/` (incl. MIGRATIONS) | `compose/`, worker `Dockerfile` | **Partial v0.38** — full ingest plane minus beat/catalog rows | **38 contract/unit tests**; migrations 001–004 |
+| **query** | **Complete** — `SPEC.md`, 9× `docs/` (incl. RBAC, SESSIONS, TOKEN_ADMIN, MCP stdio) | `compose/`, `Makefile`, `Dockerfile` | **rag-v1.0 candidate** — full LangGraph path + supervisor + breakers + events + ACL cache | **68 contract/unit tests** |
+| **ingest** | **Complete** — `SPEC.md`, 7× `docs/` (incl. MIGRATIONS) | `compose/`, worker `Dockerfile` | **v0.41** — full ingest plane incl. catalog document rows | **45 contract/unit tests**; migrations 001–004 |
 | **infra** | **Complete** — `SPEC.md`, 9× `docs/` | Full store compose; Qdrant gRPC **6334** | **Partial** — `init-db.sh`, `init-minio.sh`, `postgres-init.sh` (4 catalog roles), `healthcheck.sh`, `backup.sh`, `render_caddyfile.py`, `hybrid-rag-realm.json` | No `postgres-catalog-indexes.sql` (INF-P2) |
 | **inference** | **Complete** — `SPEC.md`, 7× `docs/` | vLLM `v0.6.6` compose profiles | **Partial** — `reranker/sidecar.py` working minimal `/predict`; vLLM upstream images | Smoke scripts only |
 | **observability** | **Complete** — `SPEC.md`, 6× `docs/` + **§10.5 SigNoz** | Dev collector + Jaeger + Langfuse compose; `PROFILE=signoz` sidecar | **Partial** — SigNoz dashboard stubs, `otel-collector-config.signoz.yaml`, `signoz-rules.yaml` | No `otel-collector-config.prod.yaml` (OBS-P1) |
@@ -173,7 +173,7 @@ flowchart LR
 | `query/app/graph_enrich.py` | Implemented | §6.13.2 context block formatting |
 | `query/app/supervisor.py` | Implemented | Query rewrite + scope inference JSON (§6.7) |
 | `query/app/rag_graph.py` | Implemented | Full LangGraph path + degrade ladder |
-| `query/app/event_subscriber.py`, `acl_cache.py` | Implemented v0.39 | `rag:events` subscriber; ACL + result cache invalidation |
+| `query/app/event_subscriber.py`, `acl_cache.py` | Implemented v0.39–0.42 | `rag:events` subscriber; ACL cache wired in `catalog_store._load_acl` |
 | `query/app/mcp_server.py` | Implemented | `/healthz`, `/sse`, MCP tools, sessions, token admin |
 | `query/app/mcp_stdio.py` | Implemented | stdio MCP transport (`python -m app.mcp_stdio`) |
 | `query/app/jwt_auth.py` | Implemented | JWKS validation + `JWT_STUB` dev mode |
@@ -182,11 +182,13 @@ flowchart LR
 | `ingest/app/migrate.py` | Implemented | Migration runner §4.4.4 |
 | `ingest/app/parsers/` | Implemented v0.32 | Router + text/md/html/json/csv/yaml/pdf/docx/docling (stub tier) |
 | `ingest/app/pipeline.py`, `chunk_builder.py` | Implemented v0.32 | File → `chunk_payload.v1` |
-| `ingest/app/orchestrator.py` | Partial v0.32 | `POST /admin/ingest/document` wired; collection/jobs stub |
+| `ingest/app/orchestrator.py` | Implemented v0.40 | Admin ingest + connector sync + job poll (`0.7.0-beat`) |
 | `ingest/app/writers.py`, `clients/embed.py`, `clients/qdrant.py`, `clients/neo4j.py` | Implemented v0.33 | Batch embed + Qdrant upsert + Neo4j merge (stub tier) |
 | `ingest/app/acl_store.py`, `acl_handlers.py` | Implemented v0.34 | ACL grant CRUD + collection `default_acl` admin |
 | `ingest/app/connectors/`, `connector_sync.py` | Implemented v0.35 | S3/MinIO + filesystem connector sync |
 | `ingest/app/job_store.py`, `job_handlers.py` | Implemented v0.38 | Postgres/in-memory `ingest_jobs` tracking + poll API |
+| `ingest/app/beat_config.py`, `connector_enqueue.py` | Implemented v0.40 | Celery beat schedule + shared connector enqueue |
+| `ingest/app/catalog_store.py` | Implemented v0.41 | Postgres/in-memory `documents` + `document_versions` on write |
 
 #### Not yet on disk (normative refs exist)
 

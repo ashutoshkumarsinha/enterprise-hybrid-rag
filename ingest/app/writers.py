@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from app.catalog_store import get_catalog_store
 from app.clients.embed import EmbedClient
 from app.clients.neo4j import Neo4jWriter
 from app.clients.qdrant import QdrantWriter
@@ -22,20 +23,27 @@ def _write_stub_enabled() -> bool:
     return os.environ.get("INGEST_WRITE_STUB", "true").lower() in ("true", "1", "yes")
 
 
-def write_chunks(chunks: list[dict[str, Any]]) -> dict[str, Any]:
+def write_chunks(chunks: list[dict[str, Any]], *, job_id: str | None = None) -> dict[str, Any]:
     """Validate, dedup, embed, and upsert chunk payloads to Qdrant + Neo4j."""
     tracer = get_tracer()
     validated = [chunk for chunk in chunks if chunk.get("uuid") and chunk.get("text")]
     if not validated:
         return {"written": 0, "validated": 0, "skipped_dedup": 0, "stub": True}
 
+    def _finish(result: dict[str, Any]) -> dict[str, Any]:
+        catalog = get_catalog_store().record_from_chunks(validated, job_id=job_id)
+        result["documents_recorded"] = catalog.get("documents_recorded", 0)
+        return result
+
     if _write_stub_enabled():
-        return {
-            "written": 0,
-            "validated": len(validated),
-            "skipped_dedup": 0,
-            "stub": True,
-        }
+        return _finish(
+            {
+                "written": 0,
+                "validated": len(validated),
+                "skipped_dedup": 0,
+                "stub": True,
+            }
+        )
 
     with tracer.start_as_current_span("ingest.dedup") as span:
         to_write, skipped_dedup = partition_deduped_chunks(validated)
@@ -43,14 +51,16 @@ def write_chunks(chunks: list[dict[str, Any]]) -> dict[str, Any]:
         span.set_attribute("ingest.skipped_dedup", skipped_dedup)
 
     if not to_write:
-        return {
-            "written": 0,
-            "validated": len(validated),
-            "skipped_dedup": skipped_dedup,
-            "qdrant_written": 0,
-            "neo4j_written": 0,
-            "stub": False,
-        }
+        return _finish(
+            {
+                "written": 0,
+                "validated": len(validated),
+                "skipped_dedup": skipped_dedup,
+                "qdrant_written": 0,
+                "neo4j_written": 0,
+                "stub": False,
+            }
+        )
 
     embed_client = EmbedClient()
     qdrant = QdrantWriter()
@@ -84,11 +94,13 @@ def write_chunks(chunks: list[dict[str, Any]]) -> dict[str, Any]:
 
     record_written_chunks(to_write)
 
-    return {
-        "written": qdrant_written,
-        "validated": len(validated),
-        "skipped_dedup": skipped_dedup,
-        "qdrant_written": qdrant_written,
-        "neo4j_written": neo4j_written,
-        "stub": embed_client.is_stub and qdrant.is_stub and neo4j.is_stub,
-    }
+    return _finish(
+        {
+            "written": qdrant_written,
+            "validated": len(validated),
+            "skipped_dedup": skipped_dedup,
+            "qdrant_written": qdrant_written,
+            "neo4j_written": neo4j_written,
+            "stub": embed_client.is_stub and qdrant.is_stub and neo4j.is_stub,
+        }
+    )

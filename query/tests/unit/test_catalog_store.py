@@ -6,12 +6,18 @@ import pytest
 from fastapi import HTTPException
 
 from app.acl import can_read_document
+from app.acl_cache import flush_acl_cache, get_acl_entry
 from app.catalog_handlers import (
     handle_get_document_metadata,
     handle_list_indexed_documents,
 )
-from app.catalog_store import InMemoryCatalogStore, format_documents_markdown
+from app.catalog_store import InMemoryCatalogStore, PostgresCatalogStore, format_documents_markdown
 from app.models import AuthContext
+
+
+@pytest.fixture(autouse=True)
+def _reset_acl_cache() -> None:
+    flush_acl_cache()
 
 
 def test_open_collection_lists_documents() -> None:
@@ -80,3 +86,49 @@ def test_list_handler_returns_markdown() -> None:
     )
     assert result["count"] == 2
     assert "admin-guide" in result["markdown"]
+
+
+def test_postgres_load_acl_uses_cache() -> None:
+    class _Cursor:
+        def __init__(self) -> None:
+            self.execute_count = 0
+            self._sql = ""
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def execute(self, sql: str, params: object = None) -> None:
+            self.execute_count += 1
+            self._sql = sql
+
+        def fetchall(self) -> list:
+            if "collections" in self._sql:
+                return [("payments-api", ["user:alice"])]
+            return []
+
+    class _Conn:
+        def __init__(self) -> None:
+            self.cursor_obj = _Cursor()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def cursor(self) -> _Cursor:
+            return self.cursor_obj
+
+    store = PostgresCatalogStore("postgresql://stub")
+    conn = _Conn()
+    first = store._load_acl(conn, tenant_id="acme", principal="user:alice")
+    second = store._load_acl(conn, tenant_id="acme", principal="user:alice")
+    assert first[0] == second[0]
+    assert conn.cursor_obj.execute_count == 2
+    assert get_acl_entry(tenant_id="acme", principal="user:alice") is not None
+    flush_acl_cache("acme")
+    store._load_acl(conn, tenant_id="acme", principal="user:alice")
+    assert conn.cursor_obj.execute_count == 4

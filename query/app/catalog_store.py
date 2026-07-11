@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Any
 
 from app.acl import can_read_document, principals_for_acl
+from app.acl_cache import get_acl_entry, set_acl_entry
 from app.models import AuthContext
 from app.settings import Settings, get_settings
 
@@ -244,6 +245,15 @@ class PostgresCatalogStore(CatalogStore):
         tenant_id: str,
         principal: str,
     ) -> tuple[set[str], dict[tuple[str, str], list[Any]], list[dict[str, Any]]]:
+        cached = get_acl_entry(tenant_id=tenant_id, principal=principal)
+        if cached:
+            principals = set(cached["principals"])
+            default_acls = {
+                (tenant_id, collection_id): list(acl or [])
+                for collection_id, acl in cached.get("default_acls", {}).items()
+            }
+            return principals, default_acls, list(cached.get("grants") or [])
+
         principals = principals_for_acl(
             AuthContext(tenant_id=tenant_id, principal=principal, permissions=[], auth_method="mcp_token")
         )
@@ -277,6 +287,18 @@ class PostgresCatalogStore(CatalogStore):
                 }
                 for row in cur.fetchall()
             ]
+        set_acl_entry(
+            tenant_id=tenant_id,
+            principal=principal,
+            value={
+                "principals": list(principals),
+                "default_acls": {
+                    collection_id: default_acls[(tenant_id, collection_id)]
+                    for collection_id in {cid for _, cid in default_acls}
+                },
+                "grants": grants,
+            },
+        )
         return principals, default_acls, grants
 
     def _fetch_documents(

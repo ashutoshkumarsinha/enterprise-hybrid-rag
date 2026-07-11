@@ -86,7 +86,7 @@ def sync_collection(
                         parser_profile=profile,
                     )
                     chunks = parse_document(tmp_path, ctx=ctx)
-                    result = write_chunks(chunks)
+                    result = write_chunks(chunks, job_id=job_id)
                     chunk_total += result.get("validated", 0)
                     registry.mark_ingested(registry_key=key, etag=obj.etag)
                     ingested += 1
